@@ -26,11 +26,9 @@ module TimezoneFinder
 
     # HELPERS:
 
+    # TODO
+    # :return:
     def update_zone_names(path = 'timezone_names.rb')
-      <<EOT
-            TODO
-            :return:
-EOT
       puts('updating the zone names now')
       unique_zones = []
       @all_tz_names.each do |zone_name|
@@ -47,12 +45,14 @@ EOT
       # write all unique zones into the file at path with the syntax of a ruby array
 
       file = open(path, 'w')
-      file.write("timezone_names = [\n")
+      file.write("module TimezoneFinder\n")
+      file.write("  TIMEZONE_NAMES = [\n")
       unique_zones.each do |zone_name|
-        file.write("  '#{zone_name}',\n")
+        file.write("    '#{zone_name}',\n")
       end
 
-      file.write("]\n")
+      file.write("  ].freeze\n")
+      file.write("end\n")
       puts("Done\n\n")
     end
 
