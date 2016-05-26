@@ -1,7 +1,13 @@
 language: ruby
 cache: bundler
 rvm:
+  - 2.0
+  - 2.1
+  - 2.2
   - 2.3
 
 before_install:
   - sudo gem install bundler
+
+script:
+  - ruby test/basictest.rb
