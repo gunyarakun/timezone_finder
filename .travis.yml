@@ -3,6 +3,4 @@ rvm:
   - 2.0
   - 2.1
   - 2.2
-
-script:
-  - ruby test/basic_test.rb
+before_install: gem install bundler

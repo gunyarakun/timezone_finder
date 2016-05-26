@@ -1,30 +1,30 @@
-# -*- encoding: utf-8 -*-
-require File.expand_path('../lib/timezone_finder/gem_version', __FILE__)
+# coding: utf-8
+lib = File.expand_path('../lib', __FILE__)
+$LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
+require 'timezone_finder/gem_version'
 
-Gem::Specification.new do |s|
-  s.name     = 'timezone_finder'
-  s.version  = TimezoneFinder::VERSION
-  s.license  = 'MIT'
-  s.email    = 'tasuku-s-github@titech.ac'
-  s.homepage = 'https://github.com/gunyarakun/timezone_finder'
-  s.authors  = ['Tasuku SUENAGA a.k.a. gunyarakun']
+Gem::Specification.new do |spec|
+  spec.name          = 'timezone_finder'
+  spec.version       = TimezoneFinder::VERSION
+  spec.authors       = ['Tasuku SUENAGA a.k.a. gunyarakun']
+  spec.email         = ['tasuku-s-github@titech.ac']
 
-  s.summary     = 'Look up timezone from lat / long offline.'
-  s.description = %(
+  spec.summary       = 'Look up timezone from lat / long offline.'
+  spec.description = %(
     Python library to look up timezone from lat / long offline.
-    Ported version of "timezonefinder" on PyPI.
+    Ported version of 'timezonefinder' on PyPI.
   ).strip.gsub(/\s+/, ' ')
+  spec.homepage     = 'https://github.com/gunyarakun/timezone_finder'
+  spec.license       = 'MIT'
 
-  s.files         = %w( README.md LICENSE ) + Dir['lib/**/*.rb']
-
-  s.executables   = %w()
-  s.require_paths = %w( lib )
-
-  ## Make sure you can build the gem on older versions of RubyGems too:
-  s.rubygems_version = '1.6.2'
-  if s.respond_to? :required_rubygems_version=
-    s.required_rubygems_version = Gem::Requirement.new('>= 0')
+  spec.files         = `git ls-files -z`.split('\x0').reject do |f|
+    f.match(%r{^test/})
   end
-  s.required_ruby_version = '>= 2.2.0'
-  s.specification_version = 3 if s.respond_to? :specification_version
+  spec.require_paths = ['lib']
+
+  spec.add_development_dependency 'bundler', '~> 1.11'
+  spec.add_development_dependency 'rake', '~> 10.0'
+  spec.add_development_dependency 'minitest', '~> 5.0'
+  spec.add_development_dependency 'simplecov', '~> 0.11'
+  spec.add_development_dependency 'rubocop', '~> 0.40'
 end

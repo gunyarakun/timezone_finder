@@ -12,3 +12,5 @@ Thumbs.db
 Gemfile.lock
 .ruby-version
 .rbenv-gemsets
+.bundle
+coverage/

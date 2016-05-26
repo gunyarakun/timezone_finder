@@ -1,7 +1,6 @@
-require 'test/unit'
-require_relative '../lib/timezone_finder'
+require 'test_helper'
 
-class BasicTest < Test::Unit::TestCase
+class TimezoneFinderTest < Minitest::Test
   INSIDE_POINTS = {
     # invalid cause this is no zone so also no ID (-52.9883809, 29.6183884): '',
     [-44.7402611, 70.2989263] => 'America/Godthab',
@@ -44,5 +43,9 @@ class BasicTest < Test::Unit::TestCase
     OUTSIDE_POINTS.each do |k, v|
       assert_equal(v, @tf.closest_timezone_at(*k))
     end
+  end
+
+  def test_that_it_has_a_version_number
+    refute_nil ::TimezoneFinder::VERSION
   end
 end
