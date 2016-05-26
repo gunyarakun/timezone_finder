@@ -415,6 +415,6 @@ module TimezoneFinder
     'Pacific/Wake',
     'Pacific/Wallis',
     'Pacific/Yap',
-    'uninhabited',
+    'uninhabited'
   ].freeze
 end

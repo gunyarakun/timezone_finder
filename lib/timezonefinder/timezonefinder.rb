@@ -1,3 +1,7 @@
+# rubocop:disable Metrics/ClassLength,Metrics/MethodLength,Metrics/LineLength
+# rubocop:disable Metrics/AbcSize,Metrics/PerceivedComplexity,Metrics/CyclomaticComplexity,Metrics/ParameterLists
+# rubocop:disable Style/PredicateName,Style/Next,Style/AndOr
+# rubocop:disable Lint/Void
 require_relative 'helpers'
 require_relative 'timezone_names'
 
@@ -8,7 +12,6 @@ module TimezoneFinder
   # (tests evaluated this to be the fastest setup when being used with numba)
   class TimezoneFinder
     def initialize
-
       # open the file in binary reading mode
       @binary_file = open(File.join(File.dirname(__FILE__), 'timezone_data.bin'), 'rb')
 
@@ -25,18 +28,18 @@ module TimezoneFinder
       @bound_start_address = 8 * @nr_of_entries + 6
       # @poly_start_address = 40 * @nr_of_entries + 6
       @poly_start_address = 24 * @nr_of_entries + 6
-      @first_shortcut_address = @shortcuts_start + 259200
+      @first_shortcut_address = @shortcuts_start + 259_200
 
       ObjectSpace.define_finalizer(self, self.class.__del__)
     end
 
-    def self.__del__()
-      proc {
-        @binary_file.close()
-      }
+    def self.__del__
+      proc do
+        @binary_file.close
+      end
     end
 
-    def id_of(line=0)
+    def id_of(line = 0)
       # ids start at address 6. per line one unsigned 2byte int is used
       @binary_file.seek((6 + 2 * line))
       @binary_file.read(2).unpack('S>')[0]
@@ -55,7 +58,7 @@ module TimezoneFinder
       id_array
     end
 
-    def shortcuts_of(lng=0.0, lat=0.0)
+    def shortcuts_of(lng = 0.0, lat = 0.0)
       # convert coords into shortcut
       x = (lng + 180).floor.to_i
       y = ((90 - lat) * 2).floor.to_i
@@ -72,7 +75,7 @@ module TimezoneFinder
       Helpers.fromfile(@binary_file, true, 2, nr_of_polygons)
     end
 
-    def polygons_of_shortcut(x=0, y=0)
+    def polygons_of_shortcut(x = 0, y = 0)
       # get the address of the first entry in this shortcut
       # offset: 180 * number of shortcuts per lat degree * 2bytes = entries per column of x shortcuts
       # shortcuts are stored: (0,0) (0,1) (0,2)... (1,0)...
@@ -85,7 +88,7 @@ module TimezoneFinder
       Helpers.fromfile(@binary_file, true, 2, nr_of_polygons)
     end
 
-    def coords_of(line=0)
+    def coords_of(line = 0)
       @binary_file.seek((@nr_val_start_address + 2 * line))
       nr_of_values = @binary_file.read(2).unpack('S>')[0]
 
@@ -110,9 +113,9 @@ module TimezoneFinder
     # :param lat: latitude in degree
     # :param delta_degree: the 'search radius' in degree
     # :return: the timezone name of the closest found polygon or None
-    def closest_timezone_at(lng, lat, delta_degree=1)
+    def closest_timezone_at(lng, lat, delta_degree = 1)
       if lng > 180.0 or lng < -180.0 or lat > 90.0 or lat < -90.0
-        raise "The coordinates are out ouf bounds: (#{lng}, #{lat})"
+        fail "The coordinates are out ouf bounds: (#{lng}, #{lat})"
       end
 
       # the maximum possible distance is pi = 3.14...
@@ -139,9 +142,7 @@ module TimezoneFinder
       (left..right).each do |x|
         (top..bottom).each do |y|
           polygons_of_shortcut(x, y).each do |p|
-            if polygon_nrs.index(p).nil?
-              polygon_nrs << p
-            end
+            polygon_nrs << p if polygon_nrs.index(p).nil?
           end
         end
       end
@@ -200,9 +201,9 @@ module TimezoneFinder
     # :param lng: longitude of the point in degree (-180 to 180)
     # :param lat: latitude in degree (90 to -90)
     # :return: the timezone name of the matching polygon or None
-    def timezone_at(lng=0.0, lat=0.0)
+    def timezone_at(lng = 0.0, lat = 0.0)
       if lng > 180.0 or lng < -180.0 or lat > 90.0 or lat < -90.0
-        raise "The coordinates are out ouf bounds: (#{lng}, #{lat})"
+        fail "The coordinates are out ouf bounds: (#{lng}, #{lat})"
       end
 
       possible_polygons = shortcuts_of(lng, lat)
@@ -232,10 +233,10 @@ module TimezoneFinder
 
         # get the boundaries of the polygon = (lng_max, lng_min, lat_max, lat_min)
         # self.binary_file.seek((@bound_start_address + 32 * polygon_nr), )
-        @binary_file.seek((@bound_start_address + 16 * polygon_nr), )
+        @binary_file.seek((@bound_start_address + 16 * polygon_nr))
         boundaries = Helpers.fromfile(@binary_file, false, 4, 4)
         # only run the algorithm if it the point is withing the boundaries
-        if not (x > boundaries[0] or x < boundaries[1] or y > boundaries[2] or y < boundaries[3])
+        unless x > boundaries[0] or x < boundaries[1] or y > boundaries[2] or y < boundaries[3]
 
           if Helpers.inside_polygon(x, y, coords_of(polygon_nr))
             return TIMEZONE_NAMES[ids[i]]
@@ -250,9 +251,9 @@ module TimezoneFinder
     # :param lng: longitude of the point in degree
     # :param lat: latitude in degree
     # :return: the timezone name of the polygon the point is included in or None
-    def certain_timezone_at(lng=0.0, lat=0.0)
+    def certain_timezone_at(lng = 0.0, lat = 0.0)
       if lng > 180.0 or lng < -180.0 or lat > 90.0 or lat < -90.0
-        raise "The coordinates are out ouf bounds: (#{lng}, #{lat})"
+        fail "The coordinates are out ouf bounds: (#{lng}, #{lat})"
       end
 
       possible_polygons = shortcuts_of(lng, lat)
@@ -263,14 +264,12 @@ module TimezoneFinder
 
       possible_polygons.each do |polygon_nr|
         # get boundaries
-        @binary_file.seek((@bound_start_address + 16 * polygon_nr), )
+        @binary_file.seek((@bound_start_address + 16 * polygon_nr))
         boundaries = Helpers.fromfile(@binary_file, false, 4, 4)
-        if not (x > boundaries[0] or x < boundaries[1] or y > boundaries[2] or y < boundaries[3])
+        unless x > boundaries[0] or x < boundaries[1] or y > boundaries[2] or y < boundaries[3]
           if Helpers.inside_polygon(x, y, coords_of(polygon_nr))
-            if id_of(polygon_nr) >= 424
-              raise id_of(polygon_nr)
-            end
-            return TIMEZONE_NAMES[self.id_of(polygon_nr)]
+            fail id_of(polygon_nr) if id_of(polygon_nr) >= 424
+            return TIMEZONE_NAMES[id_of(polygon_nr)]
           end
         end
       end

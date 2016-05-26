@@ -1,3 +1,7 @@
+# rubocop:disable Metrics/ClassLength,Metrics/MethodLength,Metrics/LineLength
+# rubocop:disable Metrics/AbcSize,Metrics/PerceivedComplexity,Metrics/CyclomaticComplexity,Metrics/ParameterLists
+# rubocop:disable Style/PredicateName,Style/Next
+# rubocop:disable Lint/Void
 module TimezoneFinder
   class Helpers
     # tests if a point pX(x,y) is Left|On|Right of an infinite line from p1 to p2
@@ -36,9 +40,7 @@ module TimezoneFinder
 
         if y1 > y2
 
-          if x > x1
-            return 2
-          end
+          return 2 if x > x1
           if x == x1
             return 1
           else
@@ -46,9 +48,7 @@ module TimezoneFinder
           end
 
         else
-          if x > x1
-            return 0
-          end
+          return 0 if x > x1
           if x == x1
             return 1
           else
@@ -128,7 +128,7 @@ module TimezoneFinder
       wn = 0
       i = 0
       y1 = coords[1][0]
-      # TODO why start with both y1=y2= y[0]?
+      # TODO: why start with both y1=y2= y[0]?
       coords[1].each do |y2|
         if y1 < y
           if y2 >= y
@@ -226,7 +226,7 @@ module TimezoneFinder
     # :param lng_rad_p1: the latitude of the point1 on the equator (lat=0)
     # :return: distance between the point and p1 (lng_rad_p1,0) in radians
     def self.distance_to_point_on_equator(lng_rad, lat_rad, lng_rad_p1)
-      2 * Math.asin(Math.sqrt((Math.sin(lat_rad) / 2) ** 2 + Math.cos(lat_rad) * Math.sin((lng_rad - lng_rad_p1) / 2.0) ** 2))
+      2 * Math.asin(Math.sqrt((Math.sin(lat_rad) / 2)**2 + Math.cos(lat_rad) * Math.sin((lng_rad - lng_rad_p1) / 2.0)**2))
     end
 
     # :param lng_p1: the longitude of point 1 in radians
@@ -235,7 +235,7 @@ module TimezoneFinder
     # :param lat_p2: the latitude of point 1 in radians
     # :return: distance between p1 and p2 in radians
     def self.haversine(lng_p1, lat_p1, lng_p2, lat_p2)
-      2 * Math.asin(Math.sqrt(Math.sin((lat_p1 - lat_p2) / 2.0) ** 2 + Math.cos(lat_p2) * Math.cos(lat_p1) * Math.sin((lng_p1 - lng_p2) / 2.0) ** 2))
+      2 * Math.asin(Math.sqrt(Math.sin((lat_p1 - lat_p2) / 2.0)**2 + Math.cos(lat_p2) * Math.cos(lat_p1) * Math.sin((lng_p1 - lng_p2) / 2.0)**2))
     end
 
     # :param lng: lng of px in degree
@@ -313,15 +313,13 @@ module TimezoneFinder
 
       index_p0 = 1
       index_p1 = 2
-      (0...(((nr_points / 2.0) - 1).ceil.to_i)).each do |i|
+      (0...(((nr_points / 2.0) - 1).ceil.to_i)).each do |_i|
         p1_lng = trans_points[0][index_p1]
         p1_lat = trans_points[1][index_p1]
 
         distance = compute_min_distance(lng, lat, trans_points[0][index_p0], trans_points[1][index_p0], pm1_lng,
                                         pm1_lat, p1_lng, p1_lat)
-        if distance < min_distance
-          min_distance = distance
-        end
+        min_distance = distance if distance < min_distance
 
         index_p0 += 2
         index_p1 += 2
@@ -350,7 +348,7 @@ module TimezoneFinder
       end
 
       unless unpack_format
-        raise "#{unsigned ? 'unsigned' : 'signed'} #{byte_width}-byte width is not supported in fromfile"
+        fail "#{unsigned ? 'unsigned' : 'signed'} #{byte_width}-byte width is not supported in fromfile"
       end
 
       file.read(count * byte_width).unpack(unpack_format)

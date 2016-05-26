@@ -16,7 +16,7 @@ class BasicTest < Test::Unit::TestCase
     [12.9125913, 50.8291834] => 'Europe/Berlin',
     [-106.1706459, 23.7891123] => 'America/Mazatlan',
     # [-110.29080, 35.53587] => 'America/Phoenix',
-    [33, -84] => 'uninhabited',
+    [33, -84] => 'uninhabited'
   }.freeze
 
   def setup
@@ -37,7 +37,7 @@ class BasicTest < Test::Unit::TestCase
 
   OUTSIDE_POINTS = {
     [12.773955, 55.578595] => 'Europe/Copenhagen',
-    [12.773955, 55.578595, 1] => 'Europe/Copenhagen',
+    [12.773955, 55.578595, 1] => 'Europe/Copenhagen'
   }.freeze
 
   def test_closest_timezone_at
