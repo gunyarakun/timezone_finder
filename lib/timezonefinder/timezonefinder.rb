@@ -231,8 +231,8 @@ module TimezoneFinder
         polygon_nr = possible_polygons[i]
 
         # get the boundaries of the polygon = (lng_max, lng_min, lat_max, lat_min)
-        # self.binary_file.seek((self.bound_start_address + 32 * polygon_nr), )
-        @binary_file.seek((self.bound_start_address + 16 * polygon_nr), )
+        # self.binary_file.seek((@bound_start_address + 32 * polygon_nr), )
+        @binary_file.seek((@bound_start_address + 16 * polygon_nr), )
         boundaries = Helpers.fromfile(@binary_file, false, 4, 4)
         # only run the algorithm if it the point is withing the boundaries
         if not (x > boundaries[0] or x < boundaries[1] or y > boundaries[2] or y < boundaries[3])
