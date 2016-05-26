@@ -1,0 +1,7 @@
+language: ruby
+cache: bundler
+rvm:
+  - 2.3
+
+before_install:
+  - sudo gem install bundler
