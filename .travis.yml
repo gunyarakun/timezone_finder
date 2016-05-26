@@ -6,4 +6,4 @@ rvm:
   - 2.3
 
 script:
-  - ruby test/basictest.rb
+  - ruby test/basic_test.rb
