@@ -1,5 +1,5 @@
 require 'test/unit'
-require_relative '../lib/timezonefinder'
+require_relative '../lib/timezone_finder'
 
 class BasicTest < Test::Unit::TestCase
   INSIDE_POINTS = {
