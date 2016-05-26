@@ -1,0 +1,20 @@
+# Editor
+*~
+.*.sw[a-z]
+
+# Windows
+Thumbs.db
+
+# Mac OS X
+.DS_Store
+
+# Ruby
+Gemfile.lock
+.ruby-version
+.rbenv-gemsets
+.bundle
+coverage/
+pkg/
+
+# Data
+lib/timezone_finder/tz_world.json
