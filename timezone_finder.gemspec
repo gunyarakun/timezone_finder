@@ -17,7 +17,7 @@ Gem::Specification.new do |spec|
   spec.homepage     = 'https://github.com/gunyarakun/timezone_finder'
   spec.license       = 'MIT'
 
-  spec.files         = `git ls-files -z`.split('\x0').reject do |f|
+  spec.files         = `git ls-files -z`.split("\x0").reject do |f|
     f.match(%r{^test/})
   end
   spec.require_paths = ['lib']
