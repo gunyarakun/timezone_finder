@@ -1,5 +1,5 @@
 require 'test/unit'
-require_relative '../lib/timezonefinder/timezonefinder'
+require_relative '../lib/timezonefinder'
 
 class BasicTest < Test::Unit::TestCase
   INSIDE_POINTS = {
@@ -20,7 +20,7 @@ class BasicTest < Test::Unit::TestCase
   }.freeze
 
   def setup
-    @tf = TimezoneFinder::TimezoneFinder.new
+    @tf = TimezoneFinder.create
   end
 
   def test_timezone_at
