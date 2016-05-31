@@ -174,7 +174,7 @@ module TimezoneFinder
           # this polygon has to be checked
           coords = coords_of(polygon_nrs[pointer])
           nr_points = coords[0].length
-          empty_array = [[0.0] * nr_points, [0.0] * nr_points]
+          empty_array = [[0.0] * nr_points] * 2
           distance = Helpers.distance_to_polygon(lng, lat, nr_points, coords, empty_array)
 
           already_checked[pointer] = true
