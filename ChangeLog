@@ -1,0 +1,14 @@
+== 2016-06-03 version 1.5.5
+
+* using the newest version (2016d, May 2016) of the tz_world data from http://efele.net/maps/tz/world/
+* holes in the polygons which are stored in the tz_world data are now correctly stored and handled
+* rewrote the file_converter for storing the holes at the end of the
+timezone_data.bin
+* added specific test cases for hole handling
+* made some optimizations in the algorithms
+
+
+== 2016-05-26 version 0.0.1
+
+* First release
+

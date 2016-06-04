@@ -11,7 +11,7 @@ Gem::Specification.new do |spec|
 
   spec.summary       = 'Look up timezone from lat / long offline.'
   spec.description = %(
-    A library to look up timezone from lat / long offline.
+    A pure Ruby library to look up timezone from latitude / longitude offline.
     Ported version of 'timezonefinder' on PyPI.
   ).strip.gsub(/\s+/, ' ')
   spec.homepage     = 'https://github.com/gunyarakun/timezone_finder'
