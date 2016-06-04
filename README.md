@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.org/gunyarakun/timezone_finder.svg?branch=master)](https://travis-ci.org/gunyarakun/timezone_finder)
 [![Gem Version](https://badge.fury.io/rb/timezone_finder.svg)](https://badge.fury.io/rb/timezone_finder)
 
-This is a fast and lightweight ruby project to lookup the corresponding
+This is a fast and lightweight ruby project for looking up the corresponding
 timezone for a given lat/lng on earth entirely offline.
 
 This project is derived from
@@ -35,6 +35,9 @@ tf = TimezoneFinder.create
 ```
 
 #### fast algorithm:
+
+This approach is fast, but might not be what you are looking for:
+For example when there is only one possible timezone in proximity, this timezone would be returned (without checking if the point is included first).
 
 ```ruby
 # point = (longitude, latitude)
@@ -101,20 +104,16 @@ this converts the .json into the needed .bin (overwriting the old version!) and 
 
 ## Known Issues
 
-The original author MrMinimal64 ran tests for approx. 5M points and this are the mistakes he found:
-
-All points in **Lesotho** are counted to the 'Africa/Johannesburg' timezone instead of 'Africa/Maseru'.
-I am pretty sure this is because it is completely surrounded by South Africa and in the data the area of Lesotho is not excluded from this timezone.
-
-Same for the small **usbekish enclaves** in **Kirgisitan** and some points in the **Arizona Dessert** (some weird rules apply here).
-
-Those are mistakes in the data not my algorithms and in order to fix this he would need check for and then separately handle these special cases.
-This would not only slow down the algorithms, but also make them ugly.
+The original author MrMinimal64 ran tests for approx. 5M points and these are no mistakes he found.
 
 ## Contact
 
 If you notice that the tz data is outdated, encounter any bugs, have
 suggestions, criticism, etc. feel free to **open an Issue**, **add a Pull Requests** on Git.
+
+## Credits
+
+Thanks to [MrMinimal64](https://github.com/MrMinimal64) for developing the original version and giving me some advices.
 
 ## License
 

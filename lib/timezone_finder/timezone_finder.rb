@@ -1,7 +1,7 @@
 # rubocop:disable Metrics/ClassLength,Metrics/MethodLength,Metrics/LineLength
 # rubocop:disable Metrics/AbcSize,Metrics/PerceivedComplexity,Metrics/CyclomaticComplexity,Metrics/ParameterLists
 # rubocop:disable Style/PredicateName,Style/Next,Style/AndOr
-# rubocop:disable Lint/Void
+# rubocop:disable Lint/Void,Lint/HandleExceptions
 require_relative 'helpers'
 require_relative 'timezone_names'
 
@@ -23,12 +23,44 @@ module TimezoneFinder
       # the address where the shortcut section starts (after all the polygons) this is 34 433 054
       @shortcuts_start = @binary_file.read(4).unpack('L>')[0]
 
-      @nr_val_start_address = 2 * @nr_of_entries + 6
-      @adr_start_address = 4 * @nr_of_entries + 6
-      @bound_start_address = 8 * @nr_of_entries + 6
-      # @poly_start_address = 40 * @nr_of_entries + 6
-      @poly_start_address = 24 * @nr_of_entries + 6
+      @amount_of_holes = @binary_file.read(2).unpack('S>')[0]
+
+      @hole_area_start = @binary_file.read(4).unpack('L>')[0]
+
+      @nr_val_start_address = 2 * @nr_of_entries + 12
+      @adr_start_address = 4 * @nr_of_entries + 12
+      @bound_start_address = 8 * @nr_of_entries + 12
+      # @poly_start_address = 40 * @nr_of_entries + 12
       @first_shortcut_address = @shortcuts_start + 259_200
+
+      @nr_val_hole_address = @hole_area_start + @amount_of_holes * 2
+      @adr_hole_address = @hole_area_start + @amount_of_holes * 4
+      # @hole_data_start = @hole_area_start + @amount_of_holes * 8
+
+      # for store for which polygons (how many) holes exits and the id of the first of those holes
+      @hole_registry = {}
+      last_encountered_line_nr = 0
+      first_hole_id = 0
+      amount_of_holes = 0
+      @binary_file.seek(@hole_area_start)
+      (0...@amount_of_holes).each do |i|
+        related_line = @binary_file.read(2).unpack('S>')[0]
+        # puts(related_line)
+        if related_line == last_encountered_line_nr
+          amount_of_holes += 1
+        else
+          if i != 0
+            @hole_registry.update(last_encountered_line_nr => [amount_of_holes, first_hole_id])
+          end
+
+          last_encountered_line_nr = related_line
+          first_hole_id = i
+          amount_of_holes = 1
+        end
+      end
+
+      # write the entry for the last hole(s) in the registry
+      @hole_registry.update(last_encountered_line_nr => [amount_of_holes, first_hole_id])
 
       ObjectSpace.define_finalizer(self, self.class.__del__)
     end
@@ -41,7 +73,7 @@ module TimezoneFinder
 
     def id_of(line = 0)
       # ids start at address 6. per line one unsigned 2byte int is used
-      @binary_file.seek((6 + 2 * line))
+      @binary_file.seek((12 + 2 * line))
       @binary_file.read(2).unpack('S>')[0]
     end
 
@@ -50,7 +82,7 @@ module TimezoneFinder
 
       i = 0
       iterable.each do |line_nr|
-        @binary_file.seek((6 + 2 * line_nr))
+        @binary_file.seek((12 + 2 * line_nr))
         id_array[i] = @binary_file.read(2).unpack('S>')[0]
         i += 1
       end
@@ -102,7 +134,24 @@ module TimezoneFinder
        Helpers.fromfile(@binary_file, false, 4, nr_of_values)]
     end
 
-    # @profile
+    def _holes_of_line(line = 0)
+      amount_of_holes, hole_id = @hole_registry.fetch(line)
+
+      (0...amount_of_holes).each do |_i|
+        @binary_file.seek(@nr_val_hole_address + 2 * hole_id)
+        nr_of_values = @binary_file.read(2).unpack('S>')[0]
+
+        @binary_file.seek(@adr_hole_address + 4 * hole_id)
+        @binary_file.seek(@binary_file.read(4).unpack('L>')[0])
+
+        yield [Helpers.fromfile(@binary_file, false, 4, nr_of_values),
+               Helpers.fromfile(@binary_file, false, 4, nr_of_values)]
+
+        hole_id += 1
+      end
+    rescue KeyError
+    end
+
     # This function searches for the closest polygon in the surrounding shortcuts.
     # Make sure that the point does not lie within a polygon (for that case the algorithm is simply wrong!)
     # Note that the algorithm won't find the closest polygon when it's on the 'other end of earth'
@@ -219,17 +268,15 @@ module TimezoneFinder
       return TIMEZONE_NAMES[id_of(possible_polygons[0])] if nr_possible_polygons == 1
 
       # initialize the list of ids
+      # TODO: sort from least to most occurrences
       ids = possible_polygons.map { |p| id_of(p) }
-
-      # if all the polygons belong to the same zone return it
-      first_entry = ids[0]
-      if ids.count(first_entry) == nr_possible_polygons
-        return TIMEZONE_NAMES[first_entry]
-      end
 
       # otherwise check if the point is included for all the possible polygons
       (0...nr_possible_polygons).each do |i|
         polygon_nr = possible_polygons[i]
+
+        same_element = Helpers.all_the_same(i, nr_possible_polygons, ids)
+        return TIMEZONE_NAMES[same_element] if same_element != -1
 
         # get the boundaries of the polygon = (lng_max, lng_min, lat_max, lat_min)
         # self.binary_file.seek((@bound_start_address + 32 * polygon_nr), )
@@ -238,8 +285,19 @@ module TimezoneFinder
         # only run the algorithm if it the point is withing the boundaries
         unless x > boundaries[0] or x < boundaries[1] or y > boundaries[2] or y < boundaries[3]
 
-          if Helpers.inside_polygon(x, y, coords_of(polygon_nr))
-            return TIMEZONE_NAMES[ids[i]]
+          outside_all_holes = true
+          # when the point is within a hole of the polygon this timezone doesn't need to be checked
+          _holes_of_line(polygon_nr) do |hole_coordinates|
+            if Helpers.inside_polygon(x, y, hole_coordinates)
+              outside_all_holes = false
+              break
+            end
+          end
+
+          if outside_all_holes
+            if Helpers.inside_polygon(x, y, coords_of(polygon_nr))
+              return TIMEZONE_NAMES[ids[i]]
+            end
           end
         end
       end
@@ -267,9 +325,20 @@ module TimezoneFinder
         @binary_file.seek((@bound_start_address + 16 * polygon_nr))
         boundaries = Helpers.fromfile(@binary_file, false, 4, 4)
         unless x > boundaries[0] or x < boundaries[1] or y > boundaries[2] or y < boundaries[3]
-          if Helpers.inside_polygon(x, y, coords_of(polygon_nr))
-            fail id_of(polygon_nr) if id_of(polygon_nr) >= 424
-            return TIMEZONE_NAMES[id_of(polygon_nr)]
+
+          outside_all_holes = true
+          # when the point is within a hole of the polygon this timezone doesn't need to be checked
+          _holes_of_line(polygon_nr) do |hole_coordinates|
+            if Helpers.inside_polygon(x, y, hole_coordinates)
+              outside_all_holes = false
+              break
+            end
+          end
+
+          if outside_all_holes
+            if Helpers.inside_polygon(x, y, coords_of(polygon_nr))
+              return TIMEZONE_NAMES[id_of(polygon_nr)]
+            end
           end
         end
       end

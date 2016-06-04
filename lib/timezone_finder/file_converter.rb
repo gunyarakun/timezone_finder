@@ -17,11 +17,19 @@ module TimezoneFinder
     NR_SHORTCUTS_PER_LAT = 2
 
     def initialize
+      @nr_of_lines = -1
+
       @all_tz_names = []
       @ids = []
       @boundaries = []
       @all_coords = []
       @all_lengths = []
+      @amount_of_holes = 0
+      @first_hole_id_in_line = []
+      @related_line = []
+
+      @all_holes = []
+      @all_hole_lengths = []
     end
 
     # HELPERS:
@@ -94,10 +102,9 @@ module TimezoneFinder
     def parse_polygons_from_json(path = 'tz_world.json')
       f = open(path, 'r')
       puts 'Parsing data from .json'
-      n = 0
+      # file_line is the current line in the .json file being parsed. This is not the id of the Polygon!
+      file_line = 0
       f.each_line do |row|
-        puts "line #{n}" if n % 1000 == 0
-        n += 1
         # puts(row)
         tz_name_match = /"TZID":\s\"(?<name>.*)"\s\}/.match(row)
         # tz_name = /(TZID)/.match(row)
@@ -105,48 +112,123 @@ module TimezoneFinder
         if tz_name_match
           tz_name = tz_name_match['name'].gsub('\\', '')
           @all_tz_names << tz_name
+          @nr_of_lines += 1
           # puts tz_name
 
+          actual_depth = 0
+          counted_coordinate_pairs = 0
+          encountered_nr_of_coordinates = []
+          row.each_char do |char|
+            if char == '['
+              actual_depth += 1
+            elsif char == ']'
+              actual_depth -= 1
+              if actual_depth == 2
+                counted_coordinate_pairs += 1
+              elsif actual_depth == 1
+                encountered_nr_of_coordinates << counted_coordinate_pairs
+                counted_coordinate_pairs = 0
+              end
+            end
+          end
+
+          if actual_depth != 0
+            fail ArgumentError, "uneven number of brackets detected. Something is wrong in line #{file_line}"
+          end
+
           coordinates = row.scan(/[-]?\d+\.?\d+/)
+
+          sum = encountered_nr_of_coordinates.inject(0) { |a, e| a + e }
+          if coordinates.length != sum * 2
+            fail ArgumentError, "There number of coordinates is counten wrong: #{coordinates.length} #{sum * 2}"
+          end
+          # TODO: detect and store all the holes in the bin
           # puts coordinates
 
           # nr_floats = coordinates.length
           x_coords = []
           y_coords = []
-          i = 0
-          coordinates.each do |coord|
-            if i.even?
-              x_coords << coord.to_f
-            else
-              y_coords << coord.to_f
-            end
-            i += 1
-          end
-
-          fail "#{i} Floats in line #{n} found. Should be even (pairs or (x,y) )" if i.odd?
-
-          @all_coords << [x_coords, y_coords]
-          @all_lengths << x_coords.length
-          # puts x_coords
-          # puts y_coords
           xmax = -180.0
           xmin = 180.0
           ymax = -90.0
           ymin = 90.0
 
-          x_coords.each do |x|
-            xmax = x if x > xmax
-            xmin = x if x < xmin
+          pointer = 0
+          # the coordiate pairs within the first brackets [ [x,y], ..., [xn, yn] ] are the polygon coordinates
+          # The last coordinate pair should be left out (is equal to the first one)
+          (0...(2 * (encountered_nr_of_coordinates[0] - 1))).each do |n|
+            if n.even?
+              x = coordinates[pointer].to_f
+              x_coords << x
+              xmax = x if x > xmax
+              xmin = x if x < xmin
+            else
+              y = coordinates[pointer].to_f
+              y_coords << y
+              ymax = y if y > ymax
+              ymin = y if y < ymin
+            end
+
+            pointer += 1
           end
 
-          y_coords.each do |y|
-            ymax = y if y > ymax
-            ymin = y if y < ymin
-          end
+          @all_coords << [x_coords, y_coords]
+          @all_lengths << x_coords.length
+          # puts(x_coords)
+          # puts(y_coords)
 
           @boundaries << [xmax, xmin, ymax, ymin]
+
+          amount_holes_this_line = encountered_nr_of_coordinates.length - 1
+          if amount_holes_this_line > 0
+            # store how many holes there are in this line
+            # store what the number of the first hole for this line is (for calculating the address to jump)
+            @first_hole_id_in_line << @amount_of_holes
+            # keep track of how many holes there are
+            @amount_of_holes += amount_holes_this_line
+            puts(tz_name)
+
+            (0...amount_holes_this_line).each do |_i|
+              @related_line << @nr_of_lines
+              puts(@nr_of_lines)
+
+              # puts(amount_holes_this_line)
+            end
+          end
+
+          # for every encountered hole
+          (1...(amount_holes_this_line + 1)).each do |i|
+            x_coords = []
+            y_coords = []
+
+            # since the last coordinate was being left out,
+            # we have to move the pointer 2 floats further to be in the hole data again
+            pointer += 2
+
+            # The last coordinate pair should be left out (is equal to the first one)
+            (0...(2 * (encountered_nr_of_coordinates[i] - 1))).each do |n|
+              if n.even?
+                x_coords << coordinates[pointer].to_f
+              else
+                y_coords << coordinates[pointer].to_f
+              end
+
+              pointer += 1
+            end
+
+            @all_holes << [x_coords, y_coords]
+            @all_hole_lengths << x_coords.length
+          end
         end
+
+        file_line += 1
       end
+
+      # so far the nr_of_lines was used to point to the current polygon but there is actually 1 more polygons in total
+      @nr_of_lines += 1
+
+      puts("amount_of_holes: #{@amount_of_holes}")
+      puts("amount of timezones: #{@nr_of_lines}")
 
       puts("Done\n\n")
     end
@@ -158,7 +240,6 @@ module TimezoneFinder
 
     def compile_into_binary(path = 'tz_binary.bin')
       nr_of_floats = 0
-      nr_of_lines = 0
       zone_ids = []
       shortcuts = {}
 
@@ -436,7 +517,7 @@ module TimezoneFinder
       end
 
       def construct_shortcuts(shortcuts)
-        puts('building shortucts...')
+        puts('building shortcuts...')
         puts('currently in line:')
         line = 0
         @boundaries.each do |xmax, xmin, ymax, ymin|
@@ -536,11 +617,15 @@ EOT
         end
       end
 
-      puts('reading the converted .csv file')
+      # test_length = 0
       @ids.each do |id|
-        nr_of_lines += 1
+        # test_length += 1
         zone_ids << id
       end
+
+      # if test_length != @nr_of_lines
+      #   raise ArgumentError, "#{test_length} #{@nr_of_lines} #{@ids.length}"
+      # end
 
       @all_lengths.each do |length|
         nr_of_floats += 2 * length
@@ -553,18 +638,63 @@ EOT
       puts("calculating the shortcuts took: #{end_time - start_time}")
 
       # address where the actual polygon data starts. look in the description below to get more info
-      polygon_address = (24 * nr_of_lines + 6)
+      polygon_address = (24 * @nr_of_lines + 12)
 
       # for every original float now 4 bytes are needed (int32)
       shortcut_start_address = polygon_address + 4 * nr_of_floats
-      puts("The number of polygons is: #{nr_of_lines}")
+
+      # write number of entries in shortcut field (x,y)
+      nr_of_entries_in_shortcut = []
+      shortcut_entries = []
+      amount_filled_shortcuts = 0
+
+      # count how many shortcut addresses will be written:
+      (0...(360 * NR_SHORTCUTS_PER_LNG)).each do |x|
+        (0...(180 * NR_SHORTCUTS_PER_LAT)).each do |y|
+          begin
+            this_lines_shortcuts = shortcuts.fetch([x, y])
+            shortcut_entries << this_lines_shortcuts
+            amount_filled_shortcuts += 1
+            nr_of_entries_in_shortcut << this_lines_shortcuts.length
+            # puts "(#{x}, #{y}, #{this_lines_shortcuts})"
+          rescue KeyError
+            nr_of_entries_in_shortcut << 0
+          end
+        end
+      end
+
+      amount_of_shortcuts = nr_of_entries_in_shortcut.length
+      if amount_of_shortcuts != 64_800 * NR_SHORTCUTS_PER_LNG * NR_SHORTCUTS_PER_LAT
+        puts(amount_of_shortcuts)
+        fail ArgumentError, 'this number of shortcut zones is wrong'
+      end
+
+      puts("number of filled shortcut zones are: #{amount_filled_shortcuts} (=#{(amount_filled_shortcuts.fdiv(amount_of_shortcuts) * 100).round(2)}% of all shortcuts)")
+
+      # for every shortcut S> and L> is written (nr of entries and address)
+      shortcut_space = 360 * NR_SHORTCUTS_PER_LNG * 180 * NR_SHORTCUTS_PER_LAT * 6
+      nr_of_entries_in_shortcut.each do |nr|
+        # every line in every shortcut takes up 2bytes
+        shortcut_space += 2 * nr
+      end
+
+      hole_start_address = shortcut_start_address + shortcut_space
+
+      puts("The number of polygons is: #{@nr_of_lines}")
       puts("The number of floats in all the polygons is (2 per point): #{nr_of_floats}")
       puts("now writing file \"#{path}\"")
       output_file = open(path, 'wb')
       # write nr_of_lines
-      output_file.write([nr_of_lines].pack('S>'))
+      output_file.write([@nr_of_lines].pack('S>'))
       # write start address of shortcut_data:
       output_file.write([shortcut_start_address].pack('L>'))
+
+      # S> amount of holes
+      output_file.write([@amount_of_holes].pack('S>'))
+
+      # L> Address of Hole area (end of shortcut area +1) @ 8
+      output_file.write([hole_start_address].pack('L>'))
+
       # write zone_ids
       zone_ids.each do |zone_id|
         output_file.write([zone_id].pack('S>'))
@@ -603,33 +733,8 @@ EOT
       end
 
       puts("position after writing all polygon data (=start of shortcut section): #{output_file.tell}")
-      # write number of entries in shortcut field (x,y)
-      nr_of_entries_in_shortcut = []
-      shortcut_entries = []
-      total_entries_in_shortcuts = 0
 
-      # count how many shortcut addresses will be written:
-      (0...(360 * NR_SHORTCUTS_PER_LNG)).each do |x|
-        (0...(180 * NR_SHORTCUTS_PER_LAT)).each do |y|
-          begin
-            this_lines_shortcuts = shortcuts.fetch([x, y])
-            shortcut_entries << this_lines_shortcuts
-            total_entries_in_shortcuts += 1
-            nr_of_entries_in_shortcut << this_lines_shortcuts.length
-            # puts("(#{x}, #{y}, #{this_lines_shortcuts})")
-          rescue KeyError
-            nr_of_entries_in_shortcut << 0
-          end
-        end
-      end
-
-      puts("The number of filled shortcut zones are: #{total_entries_in_shortcuts}")
-
-      if nr_of_entries_in_shortcut.length != 64_800 * NR_SHORTCUTS_PER_LNG * NR_SHORTCUTS_PER_LAT
-        puts(nr_of_entries_in_shortcut.length)
-        fail 'this number of shortcut zones is wrong'
-      end
-
+      # [SHORTCUT AREA]
       # write all nr of entries
       nr_of_entries_in_shortcut.each do |nr|
         fail "There are too many polygons in this shortcuts: #{nr}" if nr > 300
@@ -644,7 +749,7 @@ EOT
           output_file.write([0].pack('L>'))
         else
           output_file.write([shortcut_address].pack('L>'))
-          # each polygon takes up 2 bytes of space
+          # each line_nr takes up 2 bytes of space
           shortcut_address += 2 * nr
         end
       end
@@ -652,17 +757,59 @@ EOT
       # write Line_Nrs for every shortcut
       shortcut_entries.each do |entries|
         entries.each do |entry|
-          fail entry if entry > nr_of_lines
+          fail entry if entry > @nr_of_lines
           output_file.write([entry].pack('S>'))
         end
       end
 
+      # [HOLE AREA, Y = number of holes (very few: around 22)]
+
+      # '!H' for every hole store the related line
+      i = 0
+      @related_line.each do |line|
+        fail ArgumentError, line if line > @nr_of_lines
+        output_file.write([line].pack('S>'))
+        i += 1
+      end
+
+      if i > @amount_of_holes
+        fail ArgumentError, 'There are more related lines than holes.'
+      end
+
+      # 'S>'  Y times [H unsigned short: nr of values (coordinate PAIRS! x,y in int32 int32) in this hole]
+      @all_hole_lengths.each do |length|
+        output_file.write([length].pack('S>'))
+      end
+
+      # '!I' Y times [ I unsigned int: absolute address of the byte where the data of that hole starts]
+      hole_address = output_file.tell + @amount_of_holes * 4
+      @all_hole_lengths.each do |length|
+        output_file.write([hole_address].pack('L>'))
+        # each pair of points takes up 8 bytes of space
+        hole_address += 8 * length
+      end
+
+      # Y times [ 2x i signed ints for every hole: x coords, y coords ]
+      # write hole polygon_data
+      @all_holes.each do |x_coords, y_coords|
+        x_coords.each do |x|
+          output_file.write([Helpers.coord2int(x)].pack('l>'))
+        end
+        y_coords.each do |y|
+          output_file.write([Helpers.coord2int(y)].pack('l>'))
+        end
+      end
+
       last_address = output_file.tell
-      shortcut_space = last_address - shortcut_start_address
+      hole_space = last_address - hole_start_address
+      if shortcut_space != last_address - shortcut_start_address - hole_space
+        fail ArgumentError, 'shortcut space is computed wrong'
+      end
       polygon_space = nr_of_floats * 4
 
-      puts("the shortcuts make up #{((shortcut_space / last_address) * 100).round(2) }% of the file")
-      puts("the polygon data makes up #{((polygon_space / last_address) * 100)}.round(2)% of the file")
+      puts("the polygon data makes up #{(polygon_space.fdiv(last_address) * 100).round(2)}% of the file")
+      puts("the shortcuts make up #{(shortcut_space.fdiv(last_address) * 100).round(2) }% of the file")
+      puts("the holes make up #{(hole_space.fdiv(last_address) * 100).round(2) }% of the file")
 
       puts('Success!')
     end
@@ -674,37 +821,58 @@ and it takes lot less space, without loosing too much accuracy (min accuracy is 
 
 no of rows (= no of polygons = no of boundaries)
 approx. 28k -> use 2byte unsigned short (has range until 65k)
-'!H' = n
+'S>' = n
 
-I Address of Shortcut area (end of polygons+1) @ 2
+L> Address of Shortcut area (end of polygons+1) @ 2
 
-'!H'  n times [H unsigned short: zone number=ID in this line, @ 6 + 2* lineNr]
+S> amount of holes @6
 
-'!H'  n times [H unsigned short: nr of values (coordinate PAIRS! x,y in long long) in this line, @ 6 + 2n + 2* lineNr]
+L> Address of Hole area (end of shortcut area +1) @ 8
 
-'!I'n times [ I unsigned int: absolute address of the byte where the polygon-data of that line starts,
-@ 6 + 4 * n +  4*lineNr]
+'S>'  n times [H unsigned short: zone number=ID in this line, @ 12 + 2* lineNr]
+
+'S>'  n times [H unsigned short: nr of values (coordinate PAIRS! x,y in long long) in this line, @ 12 + 2n + 2* lineNr]
+
+'L>'n times [ I unsigned int: absolute address of the byte where the polygon-data of that line starts,
+@ 12 + 4 * n +  4*lineNr]
 
 
 
-n times 4 int32 (take up 4*4 per line): xmax, xmin, ymax, ymin  @ 6 + 8n + 16* lineNr
-'!iiii'
+n times 4 int32 (take up 4*4 per line): xmax, xmin, ymax, ymin  @ 12 + 8n + 16* lineNr
+'l>l>l>l>'
 
 
-[starting @ 6+ 24*n = polygon data start address]
+[starting @ 12+ 24*n = polygon data start address]
 (for every line: x coords, y coords:)   stored  @ Address section (see above)
-'!i' * amount of points
+'l>' * amount of points
 
 360 * NR_SHORTCUTS_PER_LNG * 180 * NR_SHORTCUTS_PER_LAT:
 [atm: 360* 1 * 180 * 2 = 129,600]
-129,600 times !H   number of entries in shortcut field (x,y)  @ Pointer see above
+129,600 times S>   number of entries in shortcut field (x,y)  @ Pointer see above
+
+
+[SHORTCUT AREA]
+360 * NR_SHORTCUTS_PER_LNG * 180 * NR_SHORTCUTS_PER_LAT:
+[atm: 360* 1 * 180 * 2 = 129,600]
+129,600 times S>   number of entries in shortcut field (x,y)  @ Pointer see above
 
 
 Address of first Polygon_nr  in shortcut field (x,y) [0 if there is no entry] @  Pointer see above + 129,600
-129,600 times !I
+129,600 times L>
 
 [X = number of filled shortcuts]
-X times !H * amount Polygon_Nr    @ address stored in previous section
+X times S> * amount Polygon_Nr    @ address stored in previous section
+
+
+[HOLE AREA, Y = number of holes (very few: around 22)]
+
+'S>' for every hole store the related line
+
+'S>'  Y times [S unsigned short: nr of values (coordinate PAIRS! x,y in int32 int32) in this hole]
+
+'L>' Y times [ L unsigned int: absolute address of the byte where the data of that hole starts]
+
+Y times [ 2x i signed ints for every hole: x coords, y coords ]
 
 EOT
   end

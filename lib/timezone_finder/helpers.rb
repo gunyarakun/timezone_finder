@@ -6,11 +6,34 @@ module TimezoneFinder
   class Helpers
     # tests if a point pX(x,y) is Left|On|Right of an infinite line from p1 to p2
     #     Return: 2 for pX left of the line from! p1 to! p2
-    #            1 for pX on the line
+    #             1 for pX on the line [is not needed]
     #             0 for pX  right of the line
     #             this approach is only valid because we already know that y lies within ]y1;y2]
     def self.position_to_line(x, y, x1, x2, y1, y2)
-      if x1 > x2
+      if x1 < x2
+        # p2 is further right than p1
+        if x > x2
+          # pX is further right than p2,
+          if y1 > y2
+            return 2
+          else
+            return 0
+          end
+        end
+
+        if x < x1
+          # pX is further left than p1
+          if y1 > y2
+            # so it has to be right of the line p1-p2
+            return 0
+          else
+            return 2
+          end
+        end
+
+        x1gtx2 = false
+
+      else
         # p1 is further right than p2
         if x > x1
           # pX is further right than p1,
@@ -32,62 +55,23 @@ module TimezoneFinder
           end
         end
 
+        # TODO: is not return also accepted
+        if x1 == x2 && x == x1
+          # could also be equal
+          return 1
+        end
+
         # x1 greater than x2
-        x1gtx2 = True
-
-      elsif x1 == x2
-        # this is a vertical line, the position of pX is also determined by y1 and y2
-
-        if y1 > y2
-
-          return 2 if x > x1
-          if x == x1
-            return 1
-          else
-            return 0
-          end
-
-        else
-          return 0 if x > x1
-          if x == x1
-            return 1
-          else
-            return 2
-          end
-        end
-
-      else
-        # p2 is further right than p1
-
-        if x > x2
-          # pX is further right than p2,
-          if y1 > y2
-            return 2
-          else
-            return 0
-          end
-        end
-
-        if x < x1
-          # pX is further left than p1
-          if y1 > y2
-            # so it has to be right of the line p1-p2
-            return 0
-          else
-            return 2
-          end
-        end
-
-        x1gtx2 = False
+        x1gtx2 = true
       end
 
       # x is between [x1;x2]
       # compute the x-intersection of the point with the line p1-p2
-      # delta_y =  cannot be 0 here because of the condition 'y lies within ]y1;y2]'
+      # delta_y cannot be 0 here because of the condition 'y lies within ]y1;y2]'
       # NOTE: bracket placement is important here (we are dealing with 64-bit ints!). first divide then multiply!
-      x_difference = ((y - y1) * ((x2 - x1).fdiv(y2 - y1))) + x1 - x
+      delta_x = ((y - y1) * ((x2 - x1).fdiv(y2 - y1))) + x1 - x
 
-      if x_difference > 0
+      if delta_x > 0
         if x1gtx2
           if y1 > y2
             return 0
@@ -103,7 +87,7 @@ module TimezoneFinder
           end
         end
 
-      elsif x_difference == 0
+      elsif delta_x == 0
         return 1
 
       else
@@ -180,6 +164,21 @@ module TimezoneFinder
         end
       end
       wn != 0
+    end
+
+    def self.all_the_same(pointer, length, id_list)
+      # List mustn't be empty or Null
+      # There is at least one
+
+      element = id_list[pointer]
+      pointer += 1
+
+      while pointer < length
+        return -1 if element != id_list[pointer]
+        pointer += 1
+      end
+
+      element
     end
 
     def self.cartesian2rad(x, y, z)
