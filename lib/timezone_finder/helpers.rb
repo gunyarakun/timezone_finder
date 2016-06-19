@@ -225,7 +225,7 @@ module TimezoneFinder
     # this is only an approximation since the earth is not a real sphere
     def self.distance_to_point_on_equator(lng_rad, lat_rad, lng_rad_p1)
       # 2* for the distance in rad and * 12742 (mean diameter of earth) for the distance in km
-      12742 * Math.asin(Math.sqrt((Math.sin(lat_rad / 2.0)) ** 2 + Math.cos(lat_rad) * Math.sin((lng_rad - lng_rad_p1) / 2.0) ** 2))
+      12_742 * Math.asin(Math.sqrt((Math.sin(lat_rad / 2.0))**2 + Math.cos(lat_rad) * Math.sin((lng_rad - lng_rad_p1) / 2.0)**2))
     end
 
     # :param lng_p1: the longitude of point 1 in radians
@@ -236,7 +236,7 @@ module TimezoneFinder
     # this is only an approximation since the earth is not a real sphere
     def self.haversine(lng_p1, lat_p1, lng_p2, lat_p2)
       # 2* for the distance in rad and * 12742(mean diameter of earth) for the distance in km
-      12742 * Math.asin(Math.sqrt(Math.sin((lat_p1 - lat_p2) / 2.0) ** 2 + Math.cos(lat_p2) * Math.cos(lat_p1) * Math.sin((lng_p1 - lng_p2) / 2.0) ** 2))
+      12_742 * Math.asin(Math.sqrt(Math.sin((lat_p1 - lat_p2) / 2.0)**2 + Math.cos(lat_p2) * Math.cos(lat_p1) * Math.sin((lng_p1 - lng_p2) / 2.0)**2))
     end
 
     # :param lng_rad: lng of px in radians
@@ -320,7 +320,7 @@ module TimezoneFinder
 
         min_distance = [min_distance,
                         compute_min_distance(lng_rad, lat_rad, trans_points[0][index_p0], trans_points[1][index_p0],
-                        pm1_lng, pm1_lat, p1_lng, p1_lat)].min
+                                             pm1_lng, pm1_lat, p1_lng, p1_lat)].min
 
         index_p0 += 2
         index_p1 += 2
@@ -332,11 +332,11 @@ module TimezoneFinder
     end
 
     def self.distance_to_polygon(lng_rad, lat_rad, nr_points, points)
-      min_distance = 40100000
+      min_distance = 40_100_000
 
       (0...nr_points).each do |i|
         min_distance = [min_distance, haversine(lng_rad, lat_rad, radians(int2coord(points[0][i])),
-          radians(int2coord(points[1][i])))].min
+                                                radians(int2coord(points[1][i])))].min
       end
 
       min_distance

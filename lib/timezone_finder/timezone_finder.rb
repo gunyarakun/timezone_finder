@@ -197,7 +197,7 @@ module TimezoneFinder
       end
 
       # the maximum possible distance is half the perimeter of earth pi * 12743km = 40,054.xxx km
-      min_distance = 40100
+      min_distance = 40_100
       # transform point X into cartesian coordinates
       current_closest_id = nil
       central_x_shortcut = (lng + 180).floor.to_i
@@ -273,7 +273,7 @@ module TimezoneFinder
             distances[pointer] = distance
 
             already_checked[pointer] = true
-            if distance < min_distance
+            if distance < min_distance # rubocop:disable Metrics/BlockNesting
               min_distance = distance
               current_closest_id = ids[pointer]
               # whole list has to be searched again!
