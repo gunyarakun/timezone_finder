@@ -102,6 +102,8 @@ module TimezoneFinder
     def parse_polygons_from_json(path = 'tz_world.json')
       f = open(path, 'r')
       puts 'Parsing data from .json'
+      puts 'encountered holes at: '
+
       # file_line is the current line in the .json file being parsed. This is not the id of the Polygon!
       file_line = 0
       f.each_line do |row|
@@ -671,7 +673,7 @@ EOT
 
       puts("number of filled shortcut zones are: #{amount_filled_shortcuts} (=#{(amount_filled_shortcuts.fdiv(amount_of_shortcuts) * 100).round(2)}% of all shortcuts)")
 
-      # for every shortcut S> and L> is written (nr of entries and address)
+      # for every shortcut S< and L< is written (nr of entries and address)
       shortcut_space = 360 * NR_SHORTCUTS_PER_LNG * 180 * NR_SHORTCUTS_PER_LAT * 6
       nr_of_entries_in_shortcut.each do |nr|
         # every line in every shortcut takes up 2bytes
@@ -685,28 +687,28 @@ EOT
       puts("now writing file \"#{path}\"")
       output_file = open(path, 'wb')
       # write nr_of_lines
-      output_file.write([@nr_of_lines].pack('S>'))
+      output_file.write([@nr_of_lines].pack('S<'))
       # write start address of shortcut_data:
-      output_file.write([shortcut_start_address].pack('L>'))
+      output_file.write([shortcut_start_address].pack('L<'))
 
-      # S> amount of holes
-      output_file.write([@amount_of_holes].pack('S>'))
+      # S< amount of holes
+      output_file.write([@amount_of_holes].pack('S<'))
 
-      # L> Address of Hole area (end of shortcut area +1) @ 8
-      output_file.write([hole_start_address].pack('L>'))
+      # L< Address of Hole area (end of shortcut area +1) @ 8
+      output_file.write([hole_start_address].pack('L<'))
 
       # write zone_ids
       zone_ids.each do |zone_id|
-        output_file.write([zone_id].pack('S>'))
+        output_file.write([zone_id].pack('S<'))
       end
       # write number of values
       @all_lengths.each do |length|
-        output_file.write([length].pack('S>'))
+        output_file.write([length].pack('S<'))
       end
 
       # write polygon_addresses
       @all_lengths.each do |length|
-        output_file.write([polygon_address].pack('L>'))
+        output_file.write([polygon_address].pack('L<'))
         # data of the next polygon is at the address after all the space the points take
         # nr of points stored * 2 ints per point * 4 bytes per int
         polygon_address += 8 * length
@@ -719,16 +721,16 @@ EOT
 
       # write boundary_data
       @boundaries.each do |b|
-        output_file.write(b.map { |c| Helpers.coord2int(c) }.pack('l>l>l>l>'))
+        output_file.write(b.map { |c| Helpers.coord2int(c) }.pack('l<l<l<l<'))
       end
 
       # write polygon_data
       @all_coords.each do |x_coords, y_coords|
         x_coords.each do |x|
-          output_file.write([Helpers.coord2int(x)].pack('l>'))
+          output_file.write([Helpers.coord2int(x)].pack('l<'))
         end
         y_coords.each do |y|
-          output_file.write([Helpers.coord2int(y)].pack('l>'))
+          output_file.write([Helpers.coord2int(y)].pack('l<'))
         end
       end
 
@@ -738,7 +740,7 @@ EOT
       # write all nr of entries
       nr_of_entries_in_shortcut.each do |nr|
         fail "There are too many polygons in this shortcuts: #{nr}" if nr > 300
-        output_file.write([nr].pack('S>'))
+        output_file.write([nr].pack('S<'))
       end
 
       # write  Address of first Polygon_nr  in shortcut field (x,y)
@@ -746,9 +748,9 @@ EOT
       shortcut_address = output_file.tell + 259_200 * NR_SHORTCUTS_PER_LNG * NR_SHORTCUTS_PER_LAT
       nr_of_entries_in_shortcut.each do |nr|
         if nr == 0
-          output_file.write([0].pack('L>'))
+          output_file.write([0].pack('L<'))
         else
-          output_file.write([shortcut_address].pack('L>'))
+          output_file.write([shortcut_address].pack('L<'))
           # each line_nr takes up 2 bytes of space
           shortcut_address += 2 * nr
         end
@@ -758,17 +760,17 @@ EOT
       shortcut_entries.each do |entries|
         entries.each do |entry|
           fail entry if entry > @nr_of_lines
-          output_file.write([entry].pack('S>'))
+          output_file.write([entry].pack('S<'))
         end
       end
 
       # [HOLE AREA, Y = number of holes (very few: around 22)]
 
-      # '!H' for every hole store the related line
+      # 'S<' for every hole store the related line
       i = 0
       @related_line.each do |line|
         fail ArgumentError, line if line > @nr_of_lines
-        output_file.write([line].pack('S>'))
+        output_file.write([line].pack('S<'))
         i += 1
       end
 
@@ -776,15 +778,15 @@ EOT
         fail ArgumentError, 'There are more related lines than holes.'
       end
 
-      # 'S>'  Y times [H unsigned short: nr of values (coordinate PAIRS! x,y in int32 int32) in this hole]
+      # 'S<'  Y times [H unsigned short: nr of values (coordinate PAIRS! x,y in int32 int32) in this hole]
       @all_hole_lengths.each do |length|
-        output_file.write([length].pack('S>'))
+        output_file.write([length].pack('S<'))
       end
 
-      # '!I' Y times [ I unsigned int: absolute address of the byte where the data of that hole starts]
+      # 'L<' Y times [ I unsigned int: absolute address of the byte where the data of that hole starts]
       hole_address = output_file.tell + @amount_of_holes * 4
       @all_hole_lengths.each do |length|
-        output_file.write([hole_address].pack('L>'))
+        output_file.write([hole_address].pack('L<'))
         # each pair of points takes up 8 bytes of space
         hole_address += 8 * length
       end
@@ -793,10 +795,10 @@ EOT
       # write hole polygon_data
       @all_holes.each do |x_coords, y_coords|
         x_coords.each do |x|
-          output_file.write([Helpers.coord2int(x)].pack('l>'))
+          output_file.write([Helpers.coord2int(x)].pack('l<'))
         end
         y_coords.each do |y|
-          output_file.write([Helpers.coord2int(y)].pack('l>'))
+          output_file.write([Helpers.coord2int(y)].pack('l<'))
         end
       end
 
@@ -821,56 +823,56 @@ and it takes lot less space, without loosing too much accuracy (min accuracy is 
 
 no of rows (= no of polygons = no of boundaries)
 approx. 28k -> use 2byte unsigned short (has range until 65k)
-'S>' = n
+'S<' = n
 
-L> Address of Shortcut area (end of polygons+1) @ 2
+L< Address of Shortcut area (end of polygons+1) @ 2
 
-S> amount of holes @6
+S< amount of holes @6
 
-L> Address of Hole area (end of shortcut area +1) @ 8
+L< Address of Hole area (end of shortcut area +1) @ 8
 
-'S>'  n times [H unsigned short: zone number=ID in this line, @ 12 + 2* lineNr]
+'S<'  n times [H unsigned short: zone number=ID in this line, @ 12 + 2* lineNr]
 
-'S>'  n times [H unsigned short: nr of values (coordinate PAIRS! x,y in long long) in this line, @ 12 + 2n + 2* lineNr]
+'S<'  n times [H unsigned short: nr of values (coordinate PAIRS! x,y in long long) in this line, @ 12 + 2n + 2* lineNr]
 
-'L>'n times [ I unsigned int: absolute address of the byte where the polygon-data of that line starts,
+'L<'n times [ I unsigned int: absolute address of the byte where the polygon-data of that line starts,
 @ 12 + 4 * n +  4*lineNr]
 
 
 
 n times 4 int32 (take up 4*4 per line): xmax, xmin, ymax, ymin  @ 12 + 8n + 16* lineNr
-'l>l>l>l>'
+'l<l<l<l<'
 
 
 [starting @ 12+ 24*n = polygon data start address]
 (for every line: x coords, y coords:)   stored  @ Address section (see above)
-'l>' * amount of points
+'l<' * amount of points
 
 360 * NR_SHORTCUTS_PER_LNG * 180 * NR_SHORTCUTS_PER_LAT:
 [atm: 360* 1 * 180 * 2 = 129,600]
-129,600 times S>   number of entries in shortcut field (x,y)  @ Pointer see above
+129,600 times S<   number of entries in shortcut field (x,y)  @ Pointer see above
 
 
 [SHORTCUT AREA]
 360 * NR_SHORTCUTS_PER_LNG * 180 * NR_SHORTCUTS_PER_LAT:
 [atm: 360* 1 * 180 * 2 = 129,600]
-129,600 times S>   number of entries in shortcut field (x,y)  @ Pointer see above
+129,600 times S<   number of entries in shortcut field (x,y)  @ Pointer see above
 
 
 Address of first Polygon_nr  in shortcut field (x,y) [0 if there is no entry] @  Pointer see above + 129,600
-129,600 times L>
+129,600 times L<
 
 [X = number of filled shortcuts]
-X times S> * amount Polygon_Nr    @ address stored in previous section
+X times S< * amount Polygon_Nr    @ address stored in previous section
 
 
 [HOLE AREA, Y = number of holes (very few: around 22)]
 
-'S>' for every hole store the related line
+'S<' for every hole store the related line
 
-'S>'  Y times [S unsigned short: nr of values (coordinate PAIRS! x,y in int32 int32) in this hole]
+'S<'  Y times [S unsigned short: nr of values (coordinate PAIRS! x,y in int32 int32) in this hole]
 
-'L>' Y times [ L unsigned int: absolute address of the byte where the data of that hole starts]
+'L<' Y times [ L unsigned int: absolute address of the byte where the data of that hole starts]
 
 Y times [ 2x i signed ints for every hole: x coords, y coords ]
 

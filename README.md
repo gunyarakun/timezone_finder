@@ -34,10 +34,13 @@ require 'timezone_finder'
 tf = TimezoneFinder.create
 ```
 
-#### fast algorithm:
+#### timezone\_at():
 
-This approach is fast, but might not be what you are looking for:
-For example when there is only one possible timezone in proximity, this timezone would be returned (without checking if the point is included first).
+This is the default function to check which timezone a point lies in.
+If no timezone has been found, `nil` is being returned.
+**NOTE:** This approach is optimized for speed and the common case to only query points actually within a timezone.
+This might not be what you are looking for however: When there is only one possible timezone in proximity, this timezone would be returned
+(without checking if the point is included first).
 
 ```ruby
 # point = (longitude, latitude)
@@ -46,36 +49,53 @@ puts tf.timezone_at(*point)
 # = Europe/Berlin
 ```
 
-#### To make sure a point is really inside a timezone (slower):
+#### certain\_timezone\_at()
+
+This function is for making sure a point is really inside a timezone. It is slower, because all polygons (with shortcuts in that area)
+are checked until one polygon is matched.
 
 ```ruby
 puts tf.certain_timezone_at(*point)
 # = Europe/Berlin
 ```
 
-#### To find the closest timezone (slow):
+#### Proximity algorithm
+
+Only use this when the point is not inside a polygon, because the approach otherwise makes no sense.
+This returns the closest timezone of all polygons within +-1 degree lng and +-1 degree lat (or None).
 
 ```ruby
-# only use this when the point is not inside a polygon!
-# this checks all the polygons within +-1 degree lng and +-1 degree lat
 point = (12.773955, 55.578595)
 puts tf.closest_timezone_at(*point)
 # = Europe/Copenhagens
 ```
 
-#### To increase search radius even more (very slow):
+#### Other options:
+
+To increase search radius even more, use the `delta_degree`-option:
 
 ```ruby
-# this checks all the polygons within +-3 degree lng and +-3 degree lat
-# I recommend only slowly increasing the search radius
-# keep in mind that x degrees lat are not the same distance apart than x degree lng!
 puts tf.closest_timezone_at(*point, 3)
 # = Europe/Copenhagens
 ```
 
-(to make sure you really got the closest timezone increase the search
-radius until you get a result. then increase the radius once more and
-take this result.)
+This checks all the polygons within +-3 degree lng and +-3 degree lat.
+I recommend only slowly increasing the search radius, since computation time increases quite quickly
+(with the amount of polygons which need to be evaluated) and there might be many polygons within a couple degrees.
+
+Also keep in mind that x degrees lat are not the same distance apart than x degree lng (earth is a sphere)!
+So to really make sure you got the closest timezone increase the search radius until you get a result,
+then increase the radius once more and take this result. (this should only make a difference in really rare cases)
+
+With `exact_computation=true` the distance to every polygon edge is computed (way more complicated)
+, instead of just evaluating the distances to all the vertices. This only makes a real difference when polygons are very close.
+
+With `return_distances=true` the output looks like this:
+
+[ 'tz_name_of_the_closest_polygon',[ distances to every polygon in km], [tz_names of every polygon]]
+
+Note that some polygons might not be tested (for example when a zone is found to be the closest already).
+To prevent this use `force_evaluation=true`.
 
 ## Developer
 

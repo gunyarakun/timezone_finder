@@ -57,7 +57,11 @@ class TimezoneFinderTest < Minitest::Test
     [35.295953, -89.662186, 'Arlington, TN', 'America/Chicago'],
     [33.58, -85.85, 'Memphis, TN', 'America/Chicago'],
     [61.17, -150.02, 'Anchorage, AK', 'America/Anchorage'],
-    [40.7271, -73.98, 'Shore Lake Michigan', 'America/New_York']
+    [40.7271, -73.98, 'Shore Lake Michigan', 'America/New_York'],
+    [51.032593, 1.4082031, 'English Channel1', 'Europe/London'],
+    [50.9623651, 1.5732592, 'English Channel2', 'Europe/Paris'],
+    [55.5609615, 12.850585, 'Oresund Bridge1', 'Europe/Stockholm'],
+    [55.6056074, 12.7128568, 'Oresund Bridge2', 'Europe/Copenhagen']
   ]
 
   def setup

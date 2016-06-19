@@ -17,15 +17,15 @@ module TimezoneFinder
 
       # for more info on what is stored how in the .bin please read the comments in file_converter
       # read the first 2byte int (= number of polygons stored in the .bin)
-      @nr_of_entries = @binary_file.read(2).unpack('S>')[0]
+      @nr_of_entries = @binary_file.read(2).unpack('S<')[0]
 
       # set addresses
       # the address where the shortcut section starts (after all the polygons) this is 34 433 054
-      @shortcuts_start = @binary_file.read(4).unpack('L>')[0]
+      @shortcuts_start = @binary_file.read(4).unpack('L<')[0]
 
-      @amount_of_holes = @binary_file.read(2).unpack('S>')[0]
+      @amount_of_holes = @binary_file.read(2).unpack('S<')[0]
 
-      @hole_area_start = @binary_file.read(4).unpack('L>')[0]
+      @hole_area_start = @binary_file.read(4).unpack('L<')[0]
 
       @nr_val_start_address = 2 * @nr_of_entries + 12
       @adr_start_address = 4 * @nr_of_entries + 12
@@ -44,7 +44,7 @@ module TimezoneFinder
       amount_of_holes = 0
       @binary_file.seek(@hole_area_start)
       (0...@amount_of_holes).each do |i|
-        related_line = @binary_file.read(2).unpack('S>')[0]
+        related_line = @binary_file.read(2).unpack('S<')[0]
         # puts(related_line)
         if related_line == last_encountered_line_nr
           amount_of_holes += 1
@@ -74,7 +74,7 @@ module TimezoneFinder
     def id_of(line = 0)
       # ids start at address 6. per line one unsigned 2byte int is used
       @binary_file.seek((12 + 2 * line))
-      @binary_file.read(2).unpack('S>')[0]
+      @binary_file.read(2).unpack('S<')[0]
     end
 
     def ids_of(iterable)
@@ -83,7 +83,7 @@ module TimezoneFinder
       i = 0
       iterable.each do |line_nr|
         @binary_file.seek((12 + 2 * line_nr))
-        id_array[i] = @binary_file.read(2).unpack('S>')[0]
+        id_array[i] = @binary_file.read(2).unpack('S<')[0]
         i += 1
       end
 
@@ -100,10 +100,10 @@ module TimezoneFinder
       # shortcuts are stored: (0,0) (0,1) (0,2)... (1,0)...
       @binary_file.seek(@shortcuts_start + 720 * x + 2 * y)
 
-      nr_of_polygons = @binary_file.read(2).unpack('S>')[0]
+      nr_of_polygons = @binary_file.read(2).unpack('S<')[0]
 
       @binary_file.seek(@first_shortcut_address + 1440 * x + 4 * y)
-      @binary_file.seek(@binary_file.read(4).unpack('L>')[0])
+      @binary_file.seek(@binary_file.read(4).unpack('L<')[0])
       Helpers.fromfile(@binary_file, true, 2, nr_of_polygons)
     end
 
@@ -113,19 +113,19 @@ module TimezoneFinder
       # shortcuts are stored: (0,0) (0,1) (0,2)... (1,0)...
       @binary_file.seek(@shortcuts_start + 720 * x + 2 * y)
 
-      nr_of_polygons = @binary_file.read(2).unpack('S>')[0]
+      nr_of_polygons = @binary_file.read(2).unpack('S<')[0]
 
       @binary_file.seek(@first_shortcut_address + 1440 * x + 4 * y)
-      @binary_file.seek(@binary_file.read(4).unpack('L>')[0])
+      @binary_file.seek(@binary_file.read(4).unpack('L<')[0])
       Helpers.fromfile(@binary_file, true, 2, nr_of_polygons)
     end
 
     def coords_of(line = 0)
       @binary_file.seek((@nr_val_start_address + 2 * line))
-      nr_of_values = @binary_file.read(2).unpack('S>')[0]
+      nr_of_values = @binary_file.read(2).unpack('S<')[0]
 
       @binary_file.seek(@adr_start_address + 4 * line)
-      @binary_file.seek(@binary_file.read(4).unpack('L>')[0])
+      @binary_file.seek(@binary_file.read(4).unpack('L<')[0])
 
       # return [Helpers.fromfile(@binary_file, false, 8, nr_of_values),
       #         Helpers.fromfile(@binary_file, false, 8, nr_of_values)]
@@ -139,10 +139,10 @@ module TimezoneFinder
 
       (0...amount_of_holes).each do |_i|
         @binary_file.seek(@nr_val_hole_address + 2 * hole_id)
-        nr_of_values = @binary_file.read(2).unpack('S>')[0]
+        nr_of_values = @binary_file.read(2).unpack('S<')[0]
 
         @binary_file.seek(@adr_hole_address + 4 * hole_id)
-        @binary_file.seek(@binary_file.read(4).unpack('L>')[0])
+        @binary_file.seek(@binary_file.read(4).unpack('L<')[0])
 
         yield [Helpers.fromfile(@binary_file, false, 4, nr_of_values),
                Helpers.fromfile(@binary_file, false, 4, nr_of_values)]
@@ -158,21 +158,53 @@ module TimezoneFinder
     # (it can't search beyond the 180 deg lng border yet)
     # this checks all the polygons within [delta_degree] degree lng and lat
     # Keep in mind that x degrees lat are not the same distance apart than x degree lng!
+    # This is also the reason why there could still be a closer polygon even though you got a result already.
+    # order to make sure to get the closest polygon, you should increase the search radius
+    # until you get a result and then increase it once more (and take that result).
+    # This should only make a difference in really rare cases however.
     # :param lng: longitude of the point in degree
     # :param lat: latitude in degree
     # :param delta_degree: the 'search radius' in degree
-    # :return: the timezone name of the closest found polygon or None
-    def closest_timezone_at(lng, lat, delta_degree = 1)
+    # :param exact_computation: when enabled the distance to every polygon edge is computed (way more complicated),
+    # instead of only evaluating the distances to all the vertices (=default).
+    # This only makes a real difference when polygons are very close.
+    # :param return_distances: when enabled the output looks like this:
+    # ( 'tz_name_of_the_closest_polygon',[ distances to all polygons in km], [tz_names of all polygons])
+    # :param force_evaluation:
+    # :return: the timezone name of the closest found polygon, the list of distances or None
+    def closest_timezone_at(lng, lat, delta_degree = 1, exact_computation = false, return_distances = false, force_evaluation = false)
+      exact_routine = lambda do |polygon_nr|
+        coords = coords_of(polygon_nr)
+        nr_points = coords[0].length
+        empty_array = [[0.0] * nr_points, [0.0] * nr_points]
+        Helpers.distance_to_polygon_exact(lng, lat, nr_points, coords, empty_array)
+      end
+
+      normal_routine = lambda do |polygon_nr|
+        coords = coords_of(polygon_nr)
+        nr_points = coords[0].length
+        Helpers.distance_to_polygon(lng, lat, nr_points, coords)
+      end
+
       if lng > 180.0 or lng < -180.0 or lat > 90.0 or lat < -90.0
         fail "The coordinates are out ouf bounds: (#{lng}, #{lat})"
       end
 
-      # the maximum possible distance is pi = 3.14...
-      min_distance = 4
+      if exact_computation
+        routine = exact_routine
+      else
+        routine = normal_routine
+      end
+
+      # the maximum possible distance is half the perimeter of earth pi * 12743km = 40,054.xxx km
+      min_distance = 40100
       # transform point X into cartesian coordinates
       current_closest_id = nil
       central_x_shortcut = (lng + 180).floor.to_i
       central_y_shortcut = ((90 - lat) * 2).floor.to_i
+
+      lng = Helpers.radians(lng)
+      lat = Helpers.radians(lat)
 
       polygon_nrs = []
 
@@ -205,39 +237,57 @@ module TimezoneFinder
 
       # if all the polygons in this shortcut belong to the same zone return it
       first_entry = ids[0]
-      return TIMEZONE_NAMES[first_entry] if ids.count(first_entry) == polygons_in_list
+      if ids.count(first_entry) == polygons_in_list
+        unless return_distances || force_evaluation
+          return TIMEZONE_NAMES[first_entry]
+          # TODO: sort from least to most occurrences
+        end
+      end
 
-      # stores which polygons have been checked yet
-      already_checked = [false] * polygons_in_list
-
+      distances = [nil] * polygons_in_list
       pointer = 0
-      polygons_checked = 0
-
-      while polygons_checked < polygons_in_list
-        # only check a polygon when its id is not the closest a the moment!
-        if already_checked[pointer] or ids[pointer] == current_closest_id
-          # go to the next polygon
-          polygons_checked += 1
-
-        else
-          # this polygon has to be checked
-          coords = coords_of(polygon_nrs[pointer])
-          nr_points = coords[0].length
-          empty_array = [[0.0] * nr_points, [0.0] * nr_points]
-          distance = Helpers.distance_to_polygon(lng, lat, nr_points, coords, empty_array)
-
-          already_checked[pointer] = true
+      if force_evaluation
+        polygon_nrs.each do |polygon_nr|
+          distance = routine.call(polygon_nr)
+          distances[pointer] = distance
           if distance < min_distance
             min_distance = distance
             current_closest_id = ids[pointer]
-            # whole list has to be searched again!
-            polygons_checked = 1
           end
+          pointer += 1
         end
-        pointer = (pointer + 1) % polygons_in_list
+      else
+        # stores which polygons have been checked yet
+        already_checked = [false] * polygons_in_list
+        polygons_checked = 0
+
+        while polygons_checked < polygons_in_list
+          # only check a polygon when its id is not the closest a the moment!
+          if already_checked[pointer] or ids[pointer] == current_closest_id
+            # go to the next polygon
+            polygons_checked += 1
+
+          else
+            # this polygon has to be checked
+            distance = routine.call(polygon_nrs[pointer])
+            distances[pointer] = distance
+
+            already_checked[pointer] = true
+            if distance < min_distance
+              min_distance = distance
+              current_closest_id = ids[pointer]
+              # whole list has to be searched again!
+              polygons_checked = 1
+            end
+          end
+          pointer = (pointer + 1) % polygons_in_list
+        end
       end
 
-      # the the whole list has been searched
+      if return_distances
+        return TIMEZONE_NAMES[current_closest_id], distances, ids.map { |x| TIMEZONE_NAMES[x] }
+      end
+
       TIMEZONE_NAMES[current_closest_id]
     end
 
@@ -279,7 +329,6 @@ module TimezoneFinder
         return TIMEZONE_NAMES[same_element] if same_element != -1
 
         # get the boundaries of the polygon = (lng_max, lng_min, lat_max, lat_min)
-        # self.binary_file.seek((@bound_start_address + 32 * polygon_nr), )
         @binary_file.seek((@bound_start_address + 16 * polygon_nr))
         boundaries = Helpers.fromfile(@binary_file, false, 4, 4)
         # only run the algorithm if it the point is withing the boundaries

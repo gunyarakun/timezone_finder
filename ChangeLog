@@ -1,3 +1,11 @@
+== 2016-06-19 version 1.5.6
+
+* using little endian encoding now
+* introduced test for checking the proper functionality of the helper functions
+* wrote tests for proximity algorithms
+* improved proximity algorithms: introduced exact_computation, return_distances and force_evaluation functionality (s. Readme or documentation for more info)
+
+
 == 2016-06-03 version 1.5.5
 
 * using the newest version (2016d, May 2016) of the tz_world data from http://efele.net/maps/tz/world/
