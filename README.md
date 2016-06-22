@@ -2,8 +2,9 @@
 
 [![Build Status](https://travis-ci.org/gunyarakun/timezone_finder.svg?branch=master)](https://travis-ci.org/gunyarakun/timezone_finder)
 [![Gem Version](https://badge.fury.io/rb/timezone_finder.svg)](https://badge.fury.io/rb/timezone_finder)
+![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)
 
-This is a fast and lightweight ruby project for looking up the corresponding
+This is a fast and lightweight pure ruby project with no runtime dependency for looking up the corresponding
 timezone for a given lat/lng on earth entirely offline.
 
 This project is derived from
