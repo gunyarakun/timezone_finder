@@ -1,7 +1,5 @@
 # rubocop:disable Metrics/ClassLength,Metrics/MethodLength,Metrics/LineLength
 # rubocop:disable Metrics/AbcSize,Metrics/PerceivedComplexity,Metrics/CyclomaticComplexity,Metrics/ParameterLists
-# rubocop:disable Style/PredicateName,Style/Next
-# rubocop:disable Lint/Void
 module TimezoneFinder
   class Helpers
     # tests if a point pX(x,y) is Left|On|Right of an infinite line from p1 to p2
@@ -69,7 +67,7 @@ module TimezoneFinder
       # compute the x-intersection of the point with the line p1-p2
       # delta_y cannot be 0 here because of the condition 'y lies within ]y1;y2]'
       # NOTE: bracket placement is important here (we are dealing with 64-bit ints!). first divide then multiply!
-      delta_x = ((y - y1) * ((x2 - x1).fdiv(y2 - y1))) + x1 - x
+      delta_x = ((y - y1) * (x2 - x1).fdiv(y2 - y1)) + x1 - x
 
       if delta_x > 0
         if x1gtx2
@@ -225,7 +223,7 @@ module TimezoneFinder
     # this is only an approximation since the earth is not a real sphere
     def self.distance_to_point_on_equator(lng_rad, lat_rad, lng_rad_p1)
       # 2* for the distance in rad and * 12742 (mean diameter of earth) for the distance in km
-      12_742 * Math.asin(Math.sqrt((Math.sin(lat_rad / 2.0))**2 + Math.cos(lat_rad) * Math.sin((lng_rad - lng_rad_p1) / 2.0)**2))
+      12_742 * Math.asin(Math.sqrt(Math.sin(lat_rad / 2.0)**2 + Math.cos(lat_rad) * Math.sin((lng_rad - lng_rad_p1) / 2.0)**2))
     end
 
     # :param lng_p1: the longitude of point 1 in radians
@@ -360,7 +358,7 @@ module TimezoneFinder
       end
 
       unless unpack_format
-        fail "#{unsigned ? 'unsigned' : 'signed'} #{byte_width}-byte width is not supported in fromfile"
+        raise "#{unsigned ? 'unsigned' : 'signed'} #{byte_width}-byte width is not supported in fromfile"
       end
 
       file.read(count * byte_width).unpack(unpack_format)

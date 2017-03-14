@@ -51,7 +51,7 @@ class TimezoneFinderTest < Minitest::Test
     # [68.3597987,-133.745786, 'America', 'America/Inuvik'],
 
     [50.26, -9.051, 'Far off Cornwall', nil]
-  ]
+  ].freeze
 
   TEST_LOCATIONS_PROXIMITY = [
     [35.295953, -89.662186, 'Arlington, TN', 'America/Chicago'],
@@ -62,7 +62,7 @@ class TimezoneFinderTest < Minitest::Test
     [50.9623651, 1.5732592, 'English Channel2', 'Europe/Paris'],
     [55.5609615, 12.850585, 'Oresund Bridge1', 'Europe/Stockholm'],
     [55.6056074, 12.7128568, 'Oresund Bridge2', 'Europe/Copenhagen']
-  ]
+  ].freeze
 
   def setup
     @tf = TimezoneFinder.create

@@ -1,7 +1,7 @@
 # rubocop:disable Metrics/ClassLength,Metrics/MethodLength,Metrics/LineLength
 # rubocop:disable Metrics/AbcSize,Metrics/PerceivedComplexity,Metrics/CyclomaticComplexity,Metrics/ParameterLists
-# rubocop:disable Style/PredicateName,Style/Next,Style/AndOr
-# rubocop:disable Lint/Void,Lint/HandleExceptions
+# rubocop:disable Style/Next,Style/AndOr
+# rubocop:disable Lint/HandleExceptions
 require_relative 'helpers'
 require_relative 'timezone_names'
 
@@ -278,14 +278,14 @@ module TimezoneFinder
       end
 
       if lng > 180.0 or lng < -180.0 or lat > 90.0 or lat < -90.0
-        fail "The coordinates are out ouf bounds: (#{lng}, #{lat})"
+        raise "The coordinates are out ouf bounds: (#{lng}, #{lat})"
       end
 
-      if exact_computation
-        routine = exact_routine
-      else
-        routine = normal_routine
-      end
+      routine = if exact_computation
+                  exact_routine
+                else
+                  normal_routine
+                end
 
       # the maximum possible distance is half the perimeter of earth pi * 12743km = 40,054.xxx km
       min_distance = 40_100
@@ -391,7 +391,7 @@ module TimezoneFinder
     # :return: the timezone name of the matching polygon or None
     def timezone_at(lng: 0.0, lat: 0.0)
       if lng > 180.0 or lng < -180.0 or lat > 90.0 or lat < -90.0
-        fail "The coordinates are out ouf bounds: (#{lng}, #{lat})"
+        raise "The coordinates are out ouf bounds: (#{lng}, #{lat})"
       end
 
       possible_polygons = shortcuts_of(lng, lat)
@@ -451,7 +451,7 @@ module TimezoneFinder
     # :return: the timezone name of the polygon the point is included in or None
     def certain_timezone_at(lng: 0.0, lat: 0.0)
       if lng > 180.0 or lng < -180.0 or lat > 90.0 or lat < -90.0
-        fail "The coordinates are out ouf bounds: (#{lng}, #{lat})"
+        raise "The coordinates are out ouf bounds: (#{lng}, #{lat})"
       end
 
       possible_polygons = shortcuts_of(lng, lat)

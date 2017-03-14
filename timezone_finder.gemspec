@@ -10,11 +10,11 @@ Gem::Specification.new do |spec|
   spec.email         = ['tasuku-s-github@titech.ac']
 
   spec.summary       = 'Look up timezone from lat / long offline.'
-  spec.description = %(
+  spec.description   = %(
     A pure Ruby library to look up timezone from latitude / longitude offline.
     Ported version of 'timezonefinder' on PyPI.
   ).strip.gsub(/\s+/, ' ')
-  spec.homepage     = 'https://github.com/gunyarakun/timezone_finder'
+  spec.homepage      = 'https://github.com/gunyarakun/timezone_finder'
   spec.license       = 'MIT'
 
   spec.files         = `git ls-files -z`.split("\x0").reject do |f|

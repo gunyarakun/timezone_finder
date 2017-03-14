@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # rubocop:disable Metrics/ClassLength,Metrics/MethodLength,Metrics/LineLength
 # rubocop:disable Metrics/AbcSize,Metrics/PerceivedComplexity,Metrics/CyclomaticComplexity,Metrics/ParameterLists
-# rubocop:disable Style/PredicateName,Style/Next
+# rubocop:disable Style/PredicateName
 # rubocop:disable Lint/Void
 require 'set'
 require_relative 'helpers'
@@ -112,7 +112,7 @@ module TimezoneFinder
         # tz_name = /(TZID)/.match(row)
         # puts tz_name
         if tz_name_match
-          tz_name = tz_name_match['name'].gsub('\\', '')
+          tz_name = tz_name_match['name'].delete('\\')
           @all_tz_names << tz_name
           @nr_of_lines += 1
           # puts tz_name
@@ -135,14 +135,14 @@ module TimezoneFinder
           end
 
           if actual_depth != 0
-            fail ArgumentError, "uneven number of brackets detected. Something is wrong in line #{file_line}"
+            raise ArgumentError, "uneven number of brackets detected. Something is wrong in line #{file_line}"
           end
 
           coordinates = row.scan(/[-]?\d+\.?\d+/)
 
           sum = encountered_nr_of_coordinates.inject(0) { |a, e| a + e }
           if coordinates.length != sum * 2
-            fail ArgumentError, "There number of coordinates is counten wrong: #{coordinates.length} #{sum * 2}"
+            raise ArgumentError, "There number of coordinates is counten wrong: #{coordinates.length} #{sum * 2}"
           end
           # TODO: detect and store all the holes in the bin
           # puts coordinates
@@ -386,7 +386,7 @@ module TimezoneFinder
 
           nr_of_intersects = intersects.length
           if nr_of_intersects.odd?
-            fail 'an uneven number of intersections has been accounted'
+            raise 'an uneven number of intersections has been accounted'
           end
 
           (0...nr_of_intersects).step(2).each do |i|
@@ -458,7 +458,7 @@ module TimezoneFinder
 
           nr_of_intersects = intersects.length
           if nr_of_intersects.odd?
-            fail 'an uneven number of intersections has been accounted'
+            raise 'an uneven number of intersections has been accounted'
           end
 
           possible_latitudes = []
@@ -591,10 +591,10 @@ EOT
 EOT
 
             if shortcuts_for_line.length > column_nrs.length * row_nrs.length
-              fail 'there are more shortcuts than before now. there is something wrong with the algorithm!'
+              raise 'there are more shortcuts than before now. there is something wrong with the algorithm!'
             end
             if shortcuts_for_line.length < 3
-              fail 'algorithm not valid! less than 3 zones detected (should be at least 4)'
+              raise 'algorithm not valid! less than 3 zones detected (should be at least 4)'
             end
 
           else
@@ -668,7 +668,7 @@ EOT
       amount_of_shortcuts = nr_of_entries_in_shortcut.length
       if amount_of_shortcuts != 64_800 * NR_SHORTCUTS_PER_LNG * NR_SHORTCUTS_PER_LAT
         puts(amount_of_shortcuts)
-        fail ArgumentError, 'this number of shortcut zones is wrong'
+        raise ArgumentError, 'this number of shortcut zones is wrong'
       end
 
       puts("number of filled shortcut zones are: #{amount_filled_shortcuts} (=#{(amount_filled_shortcuts.fdiv(amount_of_shortcuts) * 100).round(2)}% of all shortcuts)")
@@ -716,7 +716,7 @@ EOT
 
       if shortcut_start_address != polygon_address
         # both should be the same!
-        fail 'shortcut_start_address and polygon_address should now be the same!'
+        raise 'shortcut_start_address and polygon_address should now be the same!'
       end
 
       # write boundary_data
@@ -739,7 +739,7 @@ EOT
       # [SHORTCUT AREA]
       # write all nr of entries
       nr_of_entries_in_shortcut.each do |nr|
-        fail "There are too many polygons in this shortcuts: #{nr}" if nr > 300
+        raise "There are too many polygons in this shortcuts: #{nr}" if nr > 300
         output_file.write([nr].pack('S<'))
       end
 
@@ -759,7 +759,7 @@ EOT
       # write Line_Nrs for every shortcut
       shortcut_entries.each do |entries|
         entries.each do |entry|
-          fail entry if entry > @nr_of_lines
+          raise entry if entry > @nr_of_lines
           output_file.write([entry].pack('S<'))
         end
       end
@@ -769,13 +769,13 @@ EOT
       # 'S<' for every hole store the related line
       i = 0
       @related_line.each do |line|
-        fail ArgumentError, line if line > @nr_of_lines
+        raise ArgumentError, line if line > @nr_of_lines
         output_file.write([line].pack('S<'))
         i += 1
       end
 
       if i > @amount_of_holes
-        fail ArgumentError, 'There are more related lines than holes.'
+        raise ArgumentError, 'There are more related lines than holes.'
       end
 
       # 'S<'  Y times [H unsigned short: nr of values (coordinate PAIRS! x,y in int32 int32) in this hole]
@@ -805,13 +805,13 @@ EOT
       last_address = output_file.tell
       hole_space = last_address - hole_start_address
       if shortcut_space != last_address - shortcut_start_address - hole_space
-        fail ArgumentError, 'shortcut space is computed wrong'
+        raise ArgumentError, 'shortcut space is computed wrong'
       end
       polygon_space = nr_of_floats * 4
 
       puts("the polygon data makes up #{(polygon_space.fdiv(last_address) * 100).round(2)}% of the file")
-      puts("the shortcuts make up #{(shortcut_space.fdiv(last_address) * 100).round(2) }% of the file")
-      puts("the holes make up #{(hole_space.fdiv(last_address) * 100).round(2) }% of the file")
+      puts("the shortcuts make up #{(shortcut_space.fdiv(last_address) * 100).round(2)}% of the file")
+      puts("the holes make up #{(hole_space.fdiv(last_address) * 100).round(2)}% of the file")
 
       puts('Success!')
     end
