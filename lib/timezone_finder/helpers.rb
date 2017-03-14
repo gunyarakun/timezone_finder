@@ -210,7 +210,7 @@ module TimezoneFinder
       # this is actually a rotation with -rad (use symmetry of sin/cos)
       sin_rad = Math.sin(rad)
       cos_rad = Math.cos(rad)
-      [point[0] * cos_rad - point[2] * sin_rad, point[1], point[2] * cos_rad - point[0] * sin_rad]
+      [point[0] * cos_rad + point[2] * sin_rad, point[1], point[2] * cos_rad - point[0] * sin_rad]
     end
 
     def self.coords2cartesian(lng_rad, lat_rad)

@@ -4,12 +4,14 @@
 [![Gem Version](https://badge.fury.io/rb/timezone_finder.svg)](https://badge.fury.io/rb/timezone_finder)
 ![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)
 
+**NOTE:** version 1.5.7 is incompatible with version 1.5.6 because the argument were changed into named arguments following the original Python version's change.
+
 This is a fast and lightweight pure ruby project with no runtime dependency for looking up the corresponding
 timezone for a given lat/lng on earth entirely offline.
 
 This project is derived from
 [timezonefinder](https://pypi.python.org/pypi/timezonefinder)
-([github](https://github.com/MrMinimal64/timezonefinder>)).
+([github](https://github.com/MrMinimal64/timezonefinder)).
 
 The underlying timezone data is based on work done by [Eric Muller](http://efele.net/maps/tz/world/).
 
@@ -37,16 +39,17 @@ tf = TimezoneFinder.create
 
 #### timezone\_at():
 
-This is the default function to check which timezone a point lies in.
+This is the default function to check which timezone a point lies within.
 If no timezone has been found, `nil` is being returned.
-**NOTE:** This approach is optimized for speed and the common case to only query points actually within a timezone.
-This might not be what you are looking for however: When there is only one possible timezone in proximity, this timezone would be returned
-(without checking if the point is included first).
+
+**PLEASE NOTE:** This approach is optimized for speed and the common case to only query points within a timezone.
+The last possible timezone in proximity is always returned (without checking if the point is really included).
+So results might be misleading for points outside of any timezone.
 
 ```ruby
-# point = (longitude, latitude)
-point = (13.358, 52.5061)
-puts tf.timezone_at(*point)
+longitude = 13.358
+latitude = 52.5061
+puts tf.timezone_at(lng: longitude, lat: latitude)
 # = Europe/Berlin
 ```
 
@@ -56,18 +59,19 @@ This function is for making sure a point is really inside a timezone. It is slow
 are checked until one polygon is matched.
 
 ```ruby
-puts tf.certain_timezone_at(*point)
+puts tf.certain_timezone_at(lng: longitude, lat: latitude)
 # = Europe/Berlin
 ```
 
 #### Proximity algorithm
 
 Only use this when the point is not inside a polygon, because the approach otherwise makes no sense.
-This returns the closest timezone of all polygons within +-1 degree lng and +-1 degree lat (or None).
+This returns the closest timezone of all polygons within +-1 degree lng and +-1 degree lat (or nil).
 
 ```ruby
-point = (12.773955, 55.578595)
-puts tf.closest_timezone_at(*point)
+longitude = 12.773955
+latitude = 55.578595
+puts tf.closest_timezone_at(lng: longitude, lat: latitude)
 # = Europe/Copenhagens
 ```
 
@@ -76,7 +80,7 @@ puts tf.closest_timezone_at(*point)
 To increase search radius even more, use the `delta_degree`-option:
 
 ```ruby
-puts tf.closest_timezone_at(*point, 3)
+puts tf.closest_timezone_at(lng: longitude, lat: latitude, delta_degree: 3)
 # = Europe/Copenhagens
 ```
 
@@ -86,10 +90,10 @@ I recommend only slowly increasing the search radius, since computation time inc
 
 Also keep in mind that x degrees lat are not the same distance apart than x degree lng (earth is a sphere)!
 So to really make sure you got the closest timezone increase the search radius until you get a result,
-then increase the radius once more and take this result. (this should only make a difference in really rare cases)
+then increase the radius once more and take this result. (should only make a difference in really rare cases)
 
-With `exact_computation=true` the distance to every polygon edge is computed (way more complicated)
-, instead of just evaluating the distances to all the vertices. This only makes a real difference when polygons are very close.
+With `exact_computation=true` the distance to every polygon edge is computed (way more complicated), instead of just evaluating the distances to all the vertices.
+ This only makes a real difference when polygons are very close.
 
 With `return_distances=true` the output looks like this:
 
@@ -98,11 +102,22 @@ With `return_distances=true` the output looks like this:
 Note that some polygons might not be tested (for example when a zone is found to be the closest already).
 To prevent this use `force_evaluation=true`.
 
+```ruby
+longitude = 42.1052479
+latitude = -16.622686
+puts tf.closest_timezone_at(lng: longitude, lat: latitude, delta_degree: 2,
+                            exact_computation: true, return_distances: true, force_evaluation: true)
+# = ["uninhabited",
+#     [238.1846260648566, 267.91867468894895, 207.43831938964382, 209.6790144988556, 228.4213564154256, 80.66907784731693, 217.1092486625455, 293.54672523493076, 304.527493783916],
+#     ["Africa/Maputo", "Africa/Maputo", "Africa/Maputo", "Africa/Maputo", "Africa/Maputo", "uninhabited", "Indian/Antananarivo", "Indian/Antananarivo", "Indian/Antananarivo"]
+#   ]
+```
+
 ## Developer
 
 ### Using the conversion tool:
 
-Make sure you installed the GDAL framework (thats for converting .shp shapefiles into .json)
+Make sure you installed the GDAL framework (that's for converting .shp shapefiles into .json)
 Change to the directory of the timezone\_finder package (location of ``file_converter.rb``) in your terminal and then:
 
 ```sh

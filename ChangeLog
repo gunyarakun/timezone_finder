@@ -1,3 +1,9 @@
+== 2017-03-14 version 1.5.7
+
+* clarified usage of the API in the Readme
+* all functions are now keyword-args only (to prevent lng lat mix-up errors)
+* sorting the polygons to check in the order of how often their zones appear gives a speed bonus
+
 == 2016-06-19 version 1.5.6
 
 * using little endian encoding now

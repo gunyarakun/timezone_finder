@@ -62,12 +62,12 @@ module TimezoneFinder
       # write the entry for the last hole(s) in the registry
       @hole_registry.update(last_encountered_line_nr => [amount_of_holes, first_hole_id])
 
-      ObjectSpace.define_finalizer(self, self.class.__del__)
+      ObjectSpace.define_finalizer(self, self.class.__del__(@binary_file))
     end
 
-    def self.__del__
+    def self.__del__(file)
       proc do
-        @binary_file.close
+        file.close
       end
     end
 
@@ -152,6 +152,97 @@ module TimezoneFinder
     rescue KeyError
     end
 
+    # sorts the polygons_id list from least to most occurrences of the zone ids (->speed up)
+    # approx. 0.24% of all realistic points benefit from sorting (0.4% for random points)
+    # = percentage of sorting usage for 100k points
+    # in most of those cases there are only two types of zones (= entries in counted_zones) and one of them
+    # has only one entry. That means after checking one polygon timezone_at() already stops.
+    # Sorting only really makes sense for closest_timezone_at().
+    # :param polygon_id_list:
+    # :param nr_of_polygons: length of polygon_id_list
+    # :param dont_sort: if this is set to True, the sorting algorithms is skipped
+    # :return: sorted list of polygon_ids, sorted list of zone_ids, boolean: do all entries belong to the same zone
+    def compile_id_list(polygon_id_list, nr_of_polygons, dont_sort: false)
+      all_equal = lambda do |input_data|
+        x = nil
+        for x in input_data
+          # first_val = x
+          break
+        end
+        input_data.each do |y|
+          return false if x != y
+        end
+        true
+      end
+
+      # print(polygon_id_list)
+      # print(zone_id_list)
+      zone_id_list = [0] * nr_of_polygons
+      if dont_sort
+        pointer_local = 0
+        first_id = id_of(polygon_id_list[0])
+        equal = true
+        polygon_id_list.each do |polygon_id|
+          zone_id = id_of(polygon_id)
+          equal = false if zone_id != first_id
+          zone_id_list[pointer_local] = zone_id
+          pointer_local += 1
+        end
+
+        return polygon_id_list, zone_id_list, equal
+      end
+
+      counted_zones = {}
+      pointer_local = 0
+      polygon_id_list.each do |polygon_id|
+        zone_id = id_of(polygon_id)
+        zone_id_list[pointer_local] = zone_id
+        pointer_local += 1
+        counted_zones[zone_id] = counted_zones.fetch(zone_id, 0) + 1
+      end
+      # print(counted_zones)
+
+      return polygon_id_list, zone_id_list, true if counted_zones.length == 1
+
+      if all_equal.call(counted_zones.values)
+        return polygon_id_list, zone_id_list, false
+      end
+
+      counted_zones_sorted = counted_zones.sort_by { |_key, value| value }
+      # print(counted_zones_sorted)
+
+      sorted_polygon_id_list = [0] * nr_of_polygons
+      sorted_zone_id_list = [0] * nr_of_polygons
+
+      pointer_output = 0
+      pointer_output2 = 0
+      counted_zones_sorted.each do |zone_id, amount|
+        # write all polygons from this zone in the new list
+        pointer_local = 0
+        detected_polygons = 0
+        while detected_polygons < amount
+          if zone_id_list[pointer_local] == zone_id
+            # the polygon at the pointer has the wanted zone_id
+            detected_polygons += 1
+            sorted_polygon_id_list[pointer_output] = polygon_id_list[pointer_local]
+            pointer_output += 1
+          end
+
+          pointer_local += 1
+        end
+
+        (0...amount).each do |_pointer_local|
+          sorted_zone_id_list[pointer_output2] = zone_id
+          pointer_output2 += 1
+        end
+      end
+
+      # print(sorted_polygon_id_list)
+      # print(sorted_zone_id_list)
+
+      [sorted_polygon_id_list, sorted_zone_id_list, false]
+    end
+
     # This function searches for the closest polygon in the surrounding shortcuts.
     # Make sure that the point does not lie within a polygon (for that case the algorithm is simply wrong!)
     # Note that the algorithm won't find the closest polygon when it's on the 'other end of earth'
@@ -172,7 +263,7 @@ module TimezoneFinder
     # ( 'tz_name_of_the_closest_polygon',[ distances to all polygons in km], [tz_names of all polygons])
     # :param force_evaluation:
     # :return: the timezone name of the closest found polygon, the list of distances or None
-    def closest_timezone_at(lng, lat, delta_degree = 1, exact_computation = false, return_distances = false, force_evaluation = false)
+    def closest_timezone_at(lng: nil, lat: nil, delta_degree: 1, exact_computation: false, return_distances: false, force_evaluation: false)
       exact_routine = lambda do |polygon_nr|
         coords = coords_of(polygon_nr)
         nr_points = coords[0].length
@@ -206,7 +297,7 @@ module TimezoneFinder
       lng = Helpers.radians(lng)
       lat = Helpers.radians(lat)
 
-      polygon_nrs = []
+      possible_polygons = []
 
       # there are 2 shortcuts per 1 degree lat, so to cover 1 degree two shortcuts (rows) have to be checked
       # the highest shortcut is 0
@@ -223,32 +314,30 @@ module TimezoneFinder
       (left..right).each do |x|
         (top..bottom).each do |y|
           polygons_of_shortcut(x, y).each do |p|
-            polygon_nrs << p if polygon_nrs.index(p).nil?
+            possible_polygons << p if possible_polygons.index(p).nil?
           end
         end
       end
 
-      polygons_in_list = polygon_nrs.length
+      polygons_in_list = possible_polygons.length
 
       return nil if polygons_in_list == 0
 
       # initialize the list of ids
-      ids = polygon_nrs.map { |x| id_of(x) }
+      # TODO sorting doesn't give a bonus here?!
+      possible_polygons, ids, zones_are_equal = compile_id_list(possible_polygons, polygons_in_list,
+                                                                dont_sort: true)
 
       # if all the polygons in this shortcut belong to the same zone return it
-      first_entry = ids[0]
-      if ids.count(first_entry) == polygons_in_list
-        unless return_distances || force_evaluation
-          return TIMEZONE_NAMES[first_entry]
-          # TODO: sort from least to most occurrences
-        end
+      if zones_are_equal
+        return TIMEZONE_NAMES[ids[0]] unless return_distances || force_evaluation
       end
 
       distances = [nil] * polygons_in_list
       pointer = 0
       if force_evaluation
-        polygon_nrs.each do |polygon_nr|
-          distance = routine.call(polygon_nr)
+        possible_polygons.each do |possible_polygon|
+          distance = routine.call(possible_polygon)
           distances[pointer] = distance
           if distance < min_distance
             min_distance = distance
@@ -269,7 +358,7 @@ module TimezoneFinder
 
           else
             # this polygon has to be checked
-            distance = routine.call(polygon_nrs[pointer])
+            distance = routine.call(possible_polygons[pointer])
             distances[pointer] = distance
 
             already_checked[pointer] = true
@@ -300,7 +389,7 @@ module TimezoneFinder
     # :param lng: longitude of the point in degree (-180 to 180)
     # :param lat: latitude in degree (90 to -90)
     # :return: the timezone name of the matching polygon or None
-    def timezone_at(lng = 0.0, lat = 0.0)
+    def timezone_at(lng: 0.0, lat: 0.0)
       if lng > 180.0 or lng < -180.0 or lat > 90.0 or lat < -90.0
         fail "The coordinates are out ouf bounds: (#{lng}, #{lat})"
       end
@@ -318,24 +407,23 @@ module TimezoneFinder
       return TIMEZONE_NAMES[id_of(possible_polygons[0])] if nr_possible_polygons == 1
 
       # initialize the list of ids
-      # TODO: sort from least to most occurrences
-      ids = possible_polygons.map { |p| id_of(p) }
+      # and sort possible_polygons from least to most occurrences of zone_id
+      possible_polygons, ids, only_one_zone = compile_id_list(possible_polygons, nr_possible_polygons)
+
+      return TIMEZONE_NAMES[ids[0]] if only_one_zone
 
       # otherwise check if the point is included for all the possible polygons
       (0...nr_possible_polygons).each do |i|
         polygon_nr = possible_polygons[i]
 
-        same_element = Helpers.all_the_same(i, nr_possible_polygons, ids)
-        return TIMEZONE_NAMES[same_element] if same_element != -1
-
         # get the boundaries of the polygon = (lng_max, lng_min, lat_max, lat_min)
         @binary_file.seek((@bound_start_address + 16 * polygon_nr))
         boundaries = Helpers.fromfile(@binary_file, false, 4, 4)
-        # only run the algorithm if it the point is withing the boundaries
+        # only run the expensive algorithm if the point is withing the boundaries
         unless x > boundaries[0] or x < boundaries[1] or y > boundaries[2] or y < boundaries[3]
 
           outside_all_holes = true
-          # when the point is within a hole of the polygon this timezone doesn't need to be checked
+          # when the point is within a hole of the polygon, this timezone doesn't need to be checked
           _holes_of_line(polygon_nr) do |hole_coordinates|
             if Helpers.inside_polygon(x, y, hole_coordinates)
               outside_all_holes = false
@@ -349,6 +437,9 @@ module TimezoneFinder
             end
           end
         end
+        # when after the current polygon only polygons from the same zone appear, return this zone
+        same_element = Helpers.all_the_same(i + 1, nr_possible_polygons, ids)
+        return TIMEZONE_NAMES[same_element] if same_element != -1
       end
       nil
     end
@@ -358,7 +449,7 @@ module TimezoneFinder
     # :param lng: longitude of the point in degree
     # :param lat: latitude in degree
     # :return: the timezone name of the polygon the point is included in or None
-    def certain_timezone_at(lng = 0.0, lat = 0.0)
+    def certain_timezone_at(lng: 0.0, lat: 0.0)
       if lng > 180.0 or lng < -180.0 or lat > 90.0 or lat < -90.0
         fail "The coordinates are out ouf bounds: (#{lng}, #{lat})"
       end

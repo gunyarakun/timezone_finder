@@ -70,23 +70,68 @@ class TimezoneFinderTest < Minitest::Test
 
   def test_timezone_at
     TEST_LOCATIONS.each do |lat, lon, _loc, expected|
-      assert_equal(expected, @tf.timezone_at(lon, lat))
+      assert_equal_or_nil(expected, @tf.timezone_at(lng: lon, lat: lat))
     end
   end
 
   def test_certain_timezone_at
     TEST_LOCATIONS.each do |lat, lon, _loc, expected|
-      assert_equal(expected, @tf.certain_timezone_at(lon, lat))
+      assert_equal_or_nil(expected, @tf.certain_timezone_at(lng: lon, lat: lat))
     end
   end
 
   def test_closest_timezone_at
     TEST_LOCATIONS_PROXIMITY.each do |lat, lon, _loc, expected|
-      assert_equal(expected, @tf.closest_timezone_at(lon, lat))
+      assert_equal_or_nil(expected, @tf.closest_timezone_at(lng: lon, lat: lat))
     end
+
+    longitude = 42.1052479
+    latitude = -16.622686
+    assert_equal(
+      # expected
+      [
+        'uninhabited',
+        [
+          238.1846260648566,
+          267.91867468894895,
+          207.43831938964382,
+          209.6790144988556,
+          228.4213564154256,
+          80.66907784731693,
+          217.1092486625455,
+          293.54672523493076,
+          304.527493783916
+        ],
+        [
+          'Africa/Maputo',
+          'Africa/Maputo',
+          'Africa/Maputo',
+          'Africa/Maputo',
+          'Africa/Maputo',
+          'uninhabited',
+          'Indian/Antananarivo',
+          'Indian/Antananarivo',
+          'Indian/Antananarivo'
+        ]
+      ],
+      # actual
+      @tf.closest_timezone_at(
+        lng: longitude, lat: latitude, delta_degree: 2,
+        exact_computation: true, return_distances: true, force_evaluation: true
+      )
+    )
   end
 
   def test_that_it_has_a_version_number
     refute_nil ::TimezoneFinder::VERSION
+  end
+
+  def assert_equal_or_nil(expected, actual)
+    # To avoid MiniTest 6 errors
+    if expected.nil?
+      assert_nil(actual)
+    else
+      assert_equal(expected, actual)
+    end
   end
 end
