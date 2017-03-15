@@ -87,38 +87,33 @@ class TimezoneFinderTest < Minitest::Test
 
     longitude = 42.1052479
     latitude = -16.622686
+    r = @tf.closest_timezone_at(
+      lng: longitude, lat: latitude, delta_degree: 2,
+      exact_computation: true, return_distances: true, force_evaluation: true
+    )
+
+    assert_equal('uninhabited', r[0])
+    assert_in_delta(238.1846260648566, r[1][0], 0.0001)
+    assert_in_delta(267.91867468894895, r[1][1], 0.0001)
+    assert_in_delta(207.43831938964382, r[1][2], 0.0001)
+    assert_in_delta(209.6790144988556, r[1][3], 0.0001)
+    assert_in_delta(228.4213564154256, r[1][4], 0.0001)
+    assert_in_delta(80.66907784731693, r[1][5], 0.0001)
+    assert_in_delta(217.1092486625455, r[1][6], 0.0001)
+    assert_in_delta(293.54672523493076, r[1][7], 0.0001)
+    assert_in_delta(304.527493783916, r[1][8], 0.0001)
     assert_equal(
-      # expected
       [
+        'Africa/Maputo',
+        'Africa/Maputo',
+        'Africa/Maputo',
+        'Africa/Maputo',
+        'Africa/Maputo',
         'uninhabited',
-        [
-          238.1846260648566,
-          267.91867468894895,
-          207.43831938964382,
-          209.6790144988556,
-          228.4213564154256,
-          80.66907784731693,
-          217.1092486625455,
-          293.54672523493076,
-          304.527493783916
-        ],
-        [
-          'Africa/Maputo',
-          'Africa/Maputo',
-          'Africa/Maputo',
-          'Africa/Maputo',
-          'Africa/Maputo',
-          'uninhabited',
-          'Indian/Antananarivo',
-          'Indian/Antananarivo',
-          'Indian/Antananarivo'
-        ]
-      ],
-      # actual
-      @tf.closest_timezone_at(
-        lng: longitude, lat: latitude, delta_degree: 2,
-        exact_computation: true, return_distances: true, force_evaluation: true
-      )
+        'Indian/Antananarivo',
+        'Indian/Antananarivo',
+        'Indian/Antananarivo'
+      ], r[2]
     )
   end
 
