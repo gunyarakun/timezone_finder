@@ -121,6 +121,20 @@ class TimezoneFinderTest < Minitest::Test
     refute_nil ::TimezoneFinder::VERSION
   end
 
+  def test_raises_coordinates_out_of_bounds
+    methods = [:timezone_at, :certain_timezone_at, :closest_timezone_at]
+    out_of_bounds_coordinates = [{ lat: 95, lng: 40 }, { lat: -95, lng: 40 },
+                                 { lat: 40, lng: 190 }, { lat: 40, lng: -190 }]
+
+    methods.each do |method|
+      out_of_bounds_coordinates.each do |coords|
+        assert_raises(TimezoneFinder::CoordinatesOutOfBoundsError) do
+          @tf.send(method, coords)
+        end
+      end
+    end
+  end
+
   def assert_equal_or_nil(expected, actual)
     # To avoid MiniTest 6 errors
     if expected.nil?

@@ -278,7 +278,7 @@ module TimezoneFinder
       end
 
       if lng > 180.0 or lng < -180.0 or lat > 90.0 or lat < -90.0
-        raise "The coordinates are out ouf bounds: (#{lng}, #{lat})"
+        raise ::TimezoneFinder::CoordinatesOutOfBoundsError.new(lng, lat)
       end
 
       routine = if exact_computation
@@ -391,7 +391,7 @@ module TimezoneFinder
     # :return: the timezone name of the matching polygon or None
     def timezone_at(lng: 0.0, lat: 0.0)
       if lng > 180.0 or lng < -180.0 or lat > 90.0 or lat < -90.0
-        raise "The coordinates are out ouf bounds: (#{lng}, #{lat})"
+        raise ::TimezoneFinder::CoordinatesOutOfBoundsError.new(lng, lat)
       end
 
       possible_polygons = shortcuts_of(lng, lat)
@@ -451,7 +451,7 @@ module TimezoneFinder
     # :return: the timezone name of the polygon the point is included in or None
     def certain_timezone_at(lng: 0.0, lat: 0.0)
       if lng > 180.0 or lng < -180.0 or lat > 90.0 or lat < -90.0
-        raise "The coordinates are out ouf bounds: (#{lng}, #{lat})"
+        raise ::TimezoneFinder::CoordinatesOutOfBoundsError.new(lng, lat)
       end
 
       possible_polygons = shortcuts_of(lng, lat)
