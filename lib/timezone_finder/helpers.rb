@@ -1,5 +1,3 @@
-# rubocop:disable Metrics/ClassLength,Metrics/MethodLength,Metrics/LineLength
-# rubocop:disable Metrics/AbcSize,Metrics/PerceivedComplexity,Metrics/CyclomaticComplexity,Metrics/ParameterLists
 module TimezoneFinder
   class Helpers
     # tests if a point pX(x,y) is Left|On|Right of an infinite line from p1 to p2

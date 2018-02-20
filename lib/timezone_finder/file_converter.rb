@@ -1,8 +1,4 @@
 #!/usr/bin/env ruby
-# rubocop:disable Metrics/ClassLength,Metrics/MethodLength,Metrics/LineLength
-# rubocop:disable Metrics/AbcSize,Metrics/PerceivedComplexity,Metrics/CyclomaticComplexity,Metrics/ParameterLists
-# rubocop:disable Style/PredicateName
-# rubocop:disable Lint/Void
 require 'set'
 require_relative 'helpers'
 
@@ -240,7 +236,7 @@ module TimezoneFinder
       [x_coords.map { |x| Helpers.coord2int(x) }, y_coords.map { |y| Helpers.coord2int(y) }]
     end
 
-    def compile_into_binary(path = 'tz_binary.bin')
+    def compile_into_binary(path = 'tz_binary.bin') # rubocop:disable Metrics/AbcSize,Metrics/MethodLength,Metrics/PerceivedComplexity
       nr_of_floats = 0
       zone_ids = []
       shortcuts = {}

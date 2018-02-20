@@ -1,4 +1,3 @@
-# rubocop:disable Metrics/LineLength,Metrics/MethodLength
 require 'test_helper'
 require_relative '../lib/timezone_finder/helpers'
 
@@ -11,7 +10,7 @@ def list_of_random_points(length)
   Array.new(length).map { random_point }
 end
 
-class HelpersTest < Minitest::Test # rubocop:disable Metrics/ClassLength
+class HelpersTest < Minitest::Test
   # tests if a point pX(x,y) is Left|On|Right of an infinite line from p1 to p2
   #     Return: -1 for pX left of the line from! p1 to! p2
   #             0 for pX on the line [is not needed]
@@ -95,7 +94,7 @@ class HelpersTest < Minitest::Test # rubocop:disable Metrics/ClassLength
     end
   end
 
-  def test_distance_computation # rubocop:disable Metrics/AbcSize
+  def test_distance_computation
     def km2rad(km)
       km.fdiv(6371)
     end

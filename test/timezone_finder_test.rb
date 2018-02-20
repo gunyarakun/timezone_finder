@@ -122,7 +122,7 @@ class TimezoneFinderTest < Minitest::Test
   end
 
   def test_raises_coordinates_out_of_bounds
-    methods = [:timezone_at, :certain_timezone_at, :closest_timezone_at]
+    methods = %i[timezone_at certain_timezone_at closest_timezone_at]
     out_of_bounds_coordinates = [{ lat: 95, lng: 40 }, { lat: -95, lng: 40 },
                                  { lat: 40, lng: 190 }, { lat: 40, lng: -190 }]
 

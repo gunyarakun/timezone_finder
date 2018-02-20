@@ -1,2 +1,76 @@
-inherit_from:
-  - .rubocop_todo.yml
+inherit_from: .rubocop_todo.yml
+
+AllCops:
+  TargetRubyVersion: 2.1
+  UseCache: true
+
+Metrics/AbcSize:
+  Max: 120 # should be 30
+
+Metrics/CyclomaticComplexity:
+  Max: 60 # shouble be 10
+
+Metrics/PerceivedComplexity:
+  Max: 32 # should be 8
+
+Metrics/BlockLength:
+  Max: 80
+
+Metrics/ClassLength:
+  Enabled: false
+
+Metrics/MethodLength:
+  Max: 200 # should be 45
+
+Metrics/LineLength:
+  Max: 240 # should be 120
+
+Metrics/ModuleLength:
+  Max: 420
+
+Style/BracesAroundHashParameters:
+  EnforcedStyle: context_dependent
+
+Metrics/ParameterLists:
+  CountKeywordArgs: false
+  Max: 10
+
+Naming/HeredocDelimiterNaming:
+  Enabled: false
+
+# To keep the original Pythonic code
+Style/IfUnlessModifier:
+  Enabled: false
+
+Style/GuardClause:
+  Enabled: false
+
+Style/NumericPredicate:
+  Enabled: false
+
+Style/IdenticalConditionalBranches:
+  Enabled: false
+
+Style/For:
+  Enabled: false
+
+Style/IfInsideElse:
+  Enabled: false
+
+Lint/NestedMethodDefinition:
+  Enabled: false
+
+Style/Next:
+  Enabled: false
+
+Style/AndOr:
+  Enabled: false
+
+Style/PredicateName:
+  Enabled: false
+
+Lint/Void:
+  Enabled: false
+
+Layout/IndentHeredoc:
+  Enabled: false

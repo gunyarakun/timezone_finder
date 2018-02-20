@@ -1,7 +1,3 @@
-# rubocop:disable Metrics/ClassLength,Metrics/MethodLength,Metrics/LineLength
-# rubocop:disable Metrics/AbcSize,Metrics/PerceivedComplexity,Metrics/CyclomaticComplexity,Metrics/ParameterLists
-# rubocop:disable Style/Next,Style/AndOr
-# rubocop:disable Lint/HandleExceptions
 require_relative 'helpers'
 require_relative 'timezone_names'
 
@@ -149,7 +145,7 @@ module TimezoneFinder
 
         hole_id += 1
       end
-    rescue KeyError
+    rescue KeyError # rubocop:disable Lint/HandleExceptions
     end
 
     # sorts the polygons_id list from least to most occurrences of the zone ids (->speed up)
